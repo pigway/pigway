@@ -1,0 +1,311 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.article.edit}{/block}
+{block name="head-extra"}
+<link href="__ED__/css/editormd.min.css" rel="stylesheet">
+<!--<link rel="stylesheet" href="__TD__/css/tempusdominus-bootstrap-4.min.css" rel="stylesheet">-->
+<style type="text/css"></style>
+{/block}
+{block name="main-content"}
+<div id="div-editor" class="m-0">
+    <textarea class="editormd-markdown-textarea d-none">{$article.A_ContentMarkdown}</textarea>
+    <textarea class="editormd-html-textarea d-none"></textarea>
+    {:token_meta()}
+</div>
+{/block}
+{block name="modal"}
+<div class="modal fade" id="modal-category" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="h-categoryTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="h-categoryTitle">{$Think.lang.article.category}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    {$categoryCheckboxListGroupHTML|raw}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {$Think.lang.sys.close}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script src="__JS__/eve.js" type="text/javascript"></script>
+<script src="__ED__/editormd.min.js" type="text/javascript"></script>
+<!--<script src="__JS__/uploadImg.js" type="text/javascript"></script>-->
+<!--<script src="__JS__/pretty.size.js"></script>-->
+<!--<script src="__M__/moment-with-locales.min.js" type="text/javascript"></script>-->
+<!--<script src="__TD__/js/tempusdominus-bootstrap-4.min.js" type="text/javascript"></script>-->
+<script type="text/javascript">
+    $(function () {
+        $('#lnk-post').addClass('active');
+
+        editormd.emoji.path = 'http://www.webpagefx.com/tools/emoji-cheat-sheet/graphics/emojis/';
+        editormd.katexURL = {
+            css: "__KATEX__/katex.min",
+            js: "__KATEX__/katex.min"
+        };
+
+        let UPLOAD_IMAGE_MAX_SIZE = parseInt('{$Think.config.app.upload_image_max_size}');
+        let UPLOAD_IMAGE_FILE_EXT = '{$Think.config.app.upload_image_file_ext}'
+
+        let CATEGORY_ID_LIST = [];
+        let CATEGORY_NAME_LIST = [];
+
+        function uploadImg(file, editor) {
+            let formData = new FormData();
+            let fileName = new Date().getTime() + '.' + file.name.split('.').pop();
+            formData.append('editormd-image-file', file, fileName);
+
+            $.ajax({
+                url: editor.settings.imageUploadURL,
+                type: 'post',
+                /*headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },*/
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function (jsonData) {
+                    if (jsonData === undefined) {
+                        return toastAjaxResult();
+                    }
+                    /*if (jsonData.__token__ !== undefined) {
+                        $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                    }*/
+
+                    let result = jsonData.result;
+                    if (result === DONE) {
+                        editor.insertValue('![](' + jsonData.url + ')');
+                    } else if (result === FAILED) { // 验证未通过
+                        easyToast(TOAST_ERROR, file.name + ' ' + jsonData.msg);
+                    } else if (result === INPUT_ERROR) { // 校验错误
+                        switch (jsonData.err.code) {
+                            case UPLOAD_FILE_ILLEGAL:
+                            case UPLOAD_FILE_SIZE_LIMIT:
+                            case UPLOAD_FILE_EXTENSION_LIMIT:
+                            case UPLOAD_FILE_MIME_TYPE_LIMIT:
+                                easyToast(TOAST_WARNING, file.name + ' ' + jsonData.err.msg);
+                        }
+                    } else {
+                        toastAjaxResult(result, file.name + ' ' + getErrorMessage(jsonData));
+                    }
+                },
+                error: function () {
+                    easyToast(TOAST_ERROR, file.name + ' {$Think.lang.error.unknown}');
+                }
+            });
+        }
+
+        function initPasteDragImg(editor) {
+            let doc = document.getElementById(editor.id)
+            doc.addEventListener('paste', function (event) {
+                let items = (event.clipboardData || window.clipboardData).items;
+                if (items && items.length) {
+                    // 遍历剪贴板items中图片
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].kind === 'file') {
+                            if (items[i].type.indexOf('image') !== -1) {
+                                if (items[i].getAsFile().size > UPLOAD_IMAGE_MAX_SIZE) {
+                                    return easyToast(TOAST_WARNING, items[i].getAsFile().name + ' {$Think.lang.upload.file.size.limited}{$Think.lang.punc.bracket.left}' + prettySize(UPLOAD_IMAGE_MAX_SIZE, true) + '{$Think.lang.punc.bracket.right}');
+                                }
+                                uploadImg(items[i].getAsFile(), editor);
+                            } else {
+                                easyToast(TOAST_WARNING, items[i].getAsFile().name + ' {$Think.lang.upload.file.extension.limited}{$Think.lang.punc.bracket.left}' + UPLOAD_IMAGE_FILE_EXT + '{$Think.lang.punc.bracket.right}');
+                            }
+                        }
+                    }
+                } else {
+                    return easyToast(TOAST_WARNING, '{$Think.lang.upload.browser.paste.unsupported}');
+                }
+            });
+
+            let dashboard = document.getElementById(editor.id)
+            dashboard.addEventListener('dragover', function (e) {
+                e.preventDefault()
+                e.stopPropagation()
+            })
+            dashboard.addEventListener('dragenter', function (e) {
+                e.preventDefault()
+                e.stopPropagation()
+            })
+            dashboard.addEventListener('drop', function (e) {
+                e.preventDefault()
+                e.stopPropagation()
+                let files = this.files || e.dataTransfer.files;
+                if (files && files.length) {
+                    for (let i = 0; i < files.length; i++) {
+                        if (files[i].type.indexOf('image') !== -1) {
+                            if (files[i].size > UPLOAD_IMAGE_MAX_SIZE) {
+                                return easyToast(TOAST_WARNING, files[i].name + ' {$Think.lang.upload.file.size.limited}{$Think.lang.punc.bracket.left}' + prettySize(UPLOAD_IMAGE_MAX_SIZE, true, true) + '{$Think.lang.punc.bracket.right}');
+                            }
+                            uploadImg(files[i], editor);
+                        } else {
+                            easyToast(TOAST_WARNING, files[i].name + ' {$Think.lang.upload.file.extension.limited}{$Think.lang.punc.bracket.left}' + UPLOAD_IMAGE_FILE_EXT + '{$Think.lang.punc.bracket.right}');
+                        }
+                    }
+                }
+            })
+        }
+
+        $('#modal-category').find('input[type="checkbox"]').click(function () {
+            if ($(this).is(':checked')) {
+                CATEGORY_ID_LIST.push($(this).val());
+                CATEGORY_NAME_LIST.push($(this)[0].nextSibling.data);
+            } else {
+                let categoryId = $(this).val();
+                let categoryName = $(this).parent().text();
+                /*CATEGORY_ID_LIST = $.grep(CATEGORY_ID_LIST, function (val) {
+                    return categoryId !== val;
+                });
+                CATEGORY_NAME_LIST = $.grep(CATEGORY_NAME_LIST, function (val) {
+                    return categoryName !== val;
+                });*/
+                let index = $.inArray($(this).val(), CATEGORY_ID_LIST);
+                if (index >= 0) {
+                    CATEGORY_ID_LIST.splice(index, 1);
+                    CATEGORY_NAME_LIST.splice(index, 1);
+                }
+            }
+            $('#txt-category').val(CATEGORY_NAME_LIST.join('|'));
+        });
+
+        let editor = editormd('div-editor', {
+            path: '__ED__/lib/',
+            height: '100%',
+            theme: 'dark',
+            previewTheme: 'default',
+            editorTheme: 'pastel-on-dark',
+            /*theme: 'default',
+            previewTheme: 'default',
+            editorTheme: 'eclipse',*/
+            codeFold: true,
+            //syncScrolling : false,
+            saveHTMLToTextarea: true,    // 保存 HTML 到 Textarea
+            searchReplace: true,
+            //watch : false,                // 关闭实时预览
+            htmlDecode: 'style,script,iframe|on*',            // 开启 HTML 标签解析，为了安全性，默认不开启
+            //toolbar  : false,             //关闭工具栏
+            //previewCodeHighlight : false, // 关闭预览 HTML 的代码块高亮，默认开启
+            emoji: true,
+            taskList: true,
+            tocm: true,         // Using [TOCM]
+            tex: true,                   // 开启科学公式TeX语言支持，默认关闭
+            flowChart: true,             // 开启流程图支持，默认关闭 //该选项开启需要替换editormd/lib/目录下raphael.min.js为原生代码，并在之前引入eve.js，否则和bootstrap的选择器有冲突
+            sequenceDiagram: true,       // 开启时序/序列图支持，默认关闭  //该选项开启需要替换editormd/lib/目录下raphael.min.js为原生代码，并在之前引入eve.js，否则和bootstrap的选择器有冲突
+            //dialogLockScreen : false,   // 设置弹出层对话框不锁屏，全局通用，默认为true
+            //dialogShowMask : false,     // 设置弹出层对话框显示透明遮罩层，全局通用，默认为true
+            //dialogDraggable : false,    // 设置弹出层对话框不可拖动，全局通用，默认为true
+            //dialogMaskOpacity : 0.4,    // 设置透明遮罩层的透明度，全局通用，默认值为0.1
+            //dialogMaskBgColor : '#000', // 设置透明遮罩层的背景颜色，全局通用，默认为#fff
+            imageUpload: true,
+            imageFormats: UPLOAD_IMAGE_FILE_EXT.split(','),
+            imageUploadURL: '/Article/uploadImage',
+            placeholder: '{$Think.lang.article.markdown.enjoy.help}',
+            toolbarIcons: function () {
+                return [
+                    'title',
+                    'undo', 'redo', '|',
+                    'bold', 'del', 'italic', 'quote', 'ucwords', 'uppercase', 'lowercase', '|',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '|',
+                    'list-ul', 'list-ol', 'hr', '|',
+                    'link', 'reference-link', 'image', 'code', 'preformatted-text', 'code-block', 'table', 'datetime', 'emoji', 'html-entities', 'pagebreak', '|',
+                    'goto-line', 'watch', 'preview', 'clear', 'search', '|',
+                    'help', 'info', '|',
+                    'author', 'category', 'saveDraft', 'post'
+                ];
+            },
+            toolbarCustomIcons: {
+                title: '<div class="input-group input-group-sm" style="width: calc(100vw - 20px)!important;"><label id="span-title" class="input-group-text" for="txt-title">{$Think.lang.article.title}</label><input id="txt-title" type="text" class="form-control" placeholder="{$Think.lang.article.title}" aria-label="{$Think.lang.article.title}" aria-describedby="span-title" value="{$article.A_Title}">' +
+                    '<button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#div-subtitle" aria-expanded="false" aria-controls="div-subtitle">{$Think.lang.article.subtitle}</button>' +
+                    '<button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#div-alias" aria-expanded="false" aria-controls="div-alias">{$Think.lang.article.alias}</button>' +
+                    '</div>' +
+                    '<div id="div-subtitle" class="collapse"><div class="input-group input-group-sm" style="width: calc(100vw - 20px)!important; margin-top: 10px"><label id="span-subtitle" class="input-group-text" for="txt-subtitle">{$Think.lang.article.subtitle}</label><input id="txt-subtitle" type="text" class="form-control" placeholder="{$Think.lang.article.subtitle}" aria-label="{$Think.lang.article.subtitle}" aria-describedby="span-subtitle" value="{$article.A_Subtitle}"></div></div>' +
+                    '<div id="div-alias" class="collapse"><div class="input-group input-group-sm" style="width: calc(100vw - 20px)!important; margin-top: 10px"><label id="span-alias" class="input-group-text" for="txt-alias">{$Think.lang.article.alias}</label><input id="txt-alias" type="text" class="form-control" placeholder="{$Think.lang.article.alias}" aria-label="{$Think.lang.article.alias}" aria-describedby="span-alias" value="{$article.A_Alias}"></div></div>',
+                author: '<div class="input-group input-group-sm"><label class="input-group-text" for="sel-author">{$Think.lang.article.author}</label><select id="sel-author" class="form-select form-select-sm">{foreach $authorList as $key=>$author}<option value="{$author.AU_Id}"' + '{if ($article.ArticleAuthorR[0]->AU_Id == $author.AU_Id)} selected{/if}' + '>{$author.AU_Fullname} {notempty name="author.AU_Nickname"} [{$author.AU_Nickname}]{/notempty}</option>{/foreach}</select></div>',
+                category: '<div class="input-group input-group-sm ps-1"><input id="txt-category" type="text" class="form-control" placeholder="{$Think.lang.article.category.set.help}" aria-label="{$Think.lang.article.category}" aria-describedby="btn-category" readonly disabled><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modal-category">{$Think.lang.article.category}</button></div>',
+                saveDraft: '<button id="btn-saveDraft" type="button" class="btn btn-sm btn-outline-secondary my-0 ms-1" disabled>{$Think.lang.article.save.draft}</button>',
+                post: '<button id="btn-post" type="button" class="btn btn-sm btn-outline-secondary my-0 ms-1" disabled><span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>{$Think.lang.article.post}</button>'
+            },
+            onload: function () {
+                initPasteDragImg(this);
+
+                let keyMap = {
+                    'Ctrl-R': function (cm) {
+                        cm.execCommand('replaceAll');
+                    }
+                };
+
+                this.addKeyMap(keyMap);
+
+                let categoryList = $.parseJSON('{$article.ArticleCategoryR|raw}');
+                $.each(categoryList, function () {
+                    let categoryCheckbox = $('#modal-category').find('input[value="' + this['C_Id'] + '"]');
+                    if (categoryCheckbox.length === 1) {
+                        categoryCheckbox.prop('checked', true);
+                        CATEGORY_ID_LIST.push(categoryCheckbox.val());
+                        CATEGORY_NAME_LIST.push(categoryCheckbox[0].nextSibling.data);
+                    }
+                });
+                $('#txt-category').val(CATEGORY_NAME_LIST.join('|'));
+
+                $('#btn-post').click(function () {
+                    $.ajax({
+                        type: 'post',
+                        url: '/Article/updateArticle',
+                        timeout: AJAX_TIME_OUT,
+                        async: true,
+                        dataType: 'json',
+                        beforeSend: function () {
+                            $('#btn-post').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                        },
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        data: {
+                            aid: '{$Request.get.aid}',
+                            contentFormat: 1,
+                            title: $('#txt-title').val(),
+                            subtitle: $('#txt-subtitle').val(),
+                            auid: $('#sel-author').val(),
+                            cidList: CATEGORY_ID_LIST,
+                            content: editor.getHTML(),
+                            contentMarkdown: editor.getMarkdown()
+                        },
+                        success: function (jsonData) {
+                            if (jsonData === undefined) {
+                                return toastAjaxResult();
+                            }
+                            if (jsonData.__token__ !== undefined) {
+                                $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                            }
+
+                            let result = jsonData.result;
+                            if (result === DONE) {
+                                location.href = '/Article/detail?aid=' + '{$Request.get.aid}';
+                            } else if (result === FAILED) {
+                                easyToast(TOAST_ERROR, '{$Think.lang}');
+                            } else {
+                                toastAjaxResult(result, getErrorMessage(jsonData));
+                            }
+                        },
+                        error: function () {
+                            toastAjaxResult();
+                        },
+                        complete: function () {
+                            $('#btn-post').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                        }
+                    });
+                }).removeAttr('disabled');
+            }
+        });
+    });
+</script>
+{/block}

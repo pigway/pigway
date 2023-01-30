@@ -1,0 +1,443 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.nav.index}{/block}
+{block name="head-extra"}
+<!--<link rel="stylesheet" href="__MES__/mescroll.min.css"/>-->
+<link rel="stylesheet" href="__ED__/css/editormd.preview.min.css"/>
+<style type="text/css">
+    /*.mescroll {
+        position: fixed;
+        top: 56px;
+        bottom: 37px;
+        height: auto !important;
+    }*/
+
+    .editormd-html-preview {
+        padding: 0;
+    }
+
+    .card-text p, .card-text pre > code, .card-text code {
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+
+    button.active + a {
+        z-index: 2;
+        color: #fff;
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    button.active + a, button.active + a:link, button.active + a:hover, button.active + a:active, button.active + a:visited {
+        color: #fff !important;
+    }
+
+    @media (min-width: 768px) {
+        ul {
+            max-height: calc(100vh - 56px - 37px - 38px - 43px - 16px - 16px - 16px);
+        }
+    }
+
+    /*.always-last-node[aria-expanded=false] {
+        border-bottom-width: 0;
+        border-bottom-right-radius: calc(0.25rem - 1px);
+        border-bottom-left-radius: calc(0.25rem - 1px);
+    }*/
+
+    #div-category ul {
+        overflow: auto;
+    }
+</style>
+{/block}
+{block name="main-content"}
+<div class="d-flex flex-column flex-md-row justify-content-md-between container-lg">
+    <div class="flex-fill">
+        <!--<div id="div-meScroll" class="mescroll" style="position: initial!important;">
+            <div>-->
+        <div id="div-articleList" class="px-2 mt-3">
+            {if count($articleList) > 0}
+            {foreach $articleList as $key => $article}
+            {if ($key > 0)}
+            <div class="card shadow-sm mt-3">
+                {else /}
+                <div class="card shadow-sm">
+                    {/if}
+                    <div class="card-header">
+                        <a href="{if ($article.A_Link !== null)}{$article.A_Link}{elseif ($article.A_Alias !== null) /}/Article/detail?a={$article.A_Alias}{else /}/Article/detail?aid={$article.A_Id}{/if}"
+                           class="card-title{if ($article.A_Title !== null)}">{$article.A_Title}{else /}
+                            text-silence">{$Think.lang.article.title.none}{/if}</a>
+                        {if ($article.A_Subtitle !== null)}
+                        <figcaption class="blockquote-footer d-block card-subtitle">{$article.A_Subtitle}</figcaption>
+                        {/if}
+                    </div>
+                    <div class="card-body">
+                        {if ($article.A_Excerpt !== null)}
+                        <div class="card-text">{$article.A_Excerpt|raw}</div>
+                        {elseif ($article.A_ContentFormat === 1) /}
+                        <div id="div-content_{$article.A_Id}" class="card-text" a-markdown>
+                            <div class="markdown-body editormd-html-preview">{$article.A_Content|raw}</div>
+                            <textarea class="d-none">{$article.A_ContentMarkdown|raw}</textarea>
+                        </div>
+                        {else /}
+                        <div class="card-text">{$article.A_Content|raw}</div>
+                        {/if}
+                        <hr class="text-muted my-2"/>
+                        <div class="d-flex">
+                            <small class="text-silence">{$Think.lang.data.update.last}<span
+                                    class="text-decoration-underline" data-bs-toggle="tooltip"
+                                    title="{$article.LastUpdateTime}">{$article.LastUpdateTime|timeAgo}</span>{$Think.lang.punc.comma}{:lang('article.create.by',
+                                ['author' => '<a
+                                        href="/Index/index?ca='.$Request.get.ca.'&auid='.$article.ArticleAuthorR[0]->Author->AU_Id.'"
+                                        class="text-silence">'.$article.ArticleAuthorR[0]->Author->AU_Nickname.'</a>'])}{if
+                                (count($article.ArticleCategoryR) >
+                                0)}{$Think.lang.punc.comma}{$Think.lang.article.file.in}{$Think.lang.punc.colon}{foreach
+                                $article.ArticleCategoryR as $key => $category}{if ($key >
+                                0)}{$Think.lang.punc.caesura}{/if}<a href="/Index/index?ca={$category.Category.C_Alias}&auid={$Request.get.auid}"
+                                                                     class="text-silence">{$category.Category.C_Name}</a>{/foreach}{/if}
+                            </small>{if ($article.ArticleAuthorR[0]['Author']['U_Id'] === $Request.session.uid)}<small
+                                class="ms-auto"><a href="/Article/{if ($article.A_Type === 0 && $article.A_ContentFormat === 1)}editMarkdown{/if}?aid={$article.A_Id}" class="text-nowrap">{$Think.lang.article.edit}</a></small>{/if}
+                        </div>
+                    </div>
+                    {if ($key > 0)}
+                </div>
+                {else /}
+            </div>
+            {/if}
+            {/foreach}
+            {else /}
+            <div class="text-silence text-center">{$Think.lang.article.none}</div>
+            {/if}
+        </div>
+        <!-- S Page controller -->
+        <!-- /Hidden sm -->
+        <div class="container-fluid d-none d-sm-flex justify-content-center px-2 py-3">
+            <div class="d-block">
+                <div class="d-inline-flex">
+                    <div id="div-page" class="btn-group"></div>
+                    <div class="input-group ms-2">
+                        <input id="txt-page" type="number" min="1" class="form-control" style="width: 80px"
+                               placeholder="{$Think.lang.page.number}">
+                        <button id="btn-turnToPage" type="button" class="btn btn-secondary">
+                            {$Think.lang.page.turnTo}
+                        </button>
+                    </div>
+                </div>
+                <div class="invalid-feedback text-end">
+                    <span id="txt-pageInvalidHelp"></span>
+                </div>
+            </div>
+        </div>
+        <!-- /Visible sm -->
+        <div class="container-fluid d-flex d-sm-none justify-content-center px-2 py-3">
+            <div id="div-page-xs" class="d-block btn-group btn-group-sm"
+                 style="white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch"></div>
+        </div>
+        <!-- E Page controller -->
+        <!--</div>
+    </div>-->
+    </div>
+    <div class="flex-md-shrink-0 px-2 pt-3 mb-3 sticky-md-top" style="height: 100%">
+        <div class="input-group">
+            <input id="txt-search" class="form-control" type="search" placeholder="{$Think.lang.sys.search}"
+                   aria-label="{$Think.lang.sys.search}">
+            <button id="btn-search" class="btn btn-secondary" type="button">{$Think.lang.sys.search}</button>
+        </div>
+        <div id="div-category" class="mt-3">
+            <div class="card">
+                <div class="card-header">
+                    {$Think.lang.article.category}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {$categoryListGroupHTML|raw}
+                </ul>
+            </div>
+        </div>
+        {if $author !== null}
+        <div id="div-author" class="mt-3">
+            <div class="card">
+                <div class="card-header">
+                    {$Think.lang.article.author}
+                </div>
+                <ul class="list-group list-group-flush">
+                    <button id="btn-author" class="list-group-item list-group-item-action d-flex align-items-center active">{$author[0]['AU_Nickname']}</button>
+                </ul>
+            </div>
+        </div>
+        {/if}
+    </div>
+</div>
+{/block}
+{block name="modal"}
+<div id="modalPage" class="modal fade px-2" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered mx-auto modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input id="txt-page-xs" type="number" min="1" class="container form-control"
+                       placeholder="{$Think.lang.page.number}">
+                <div class="invalid-feedback">
+                    <span id="txt-pageInvalidHelp-xs"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {$Think.lang.sys.close}
+                </button>
+                <button id="btn-turnToPage-xs" type="button" class="btn btn-primary">{$Think.lang.page.turnTo}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<!--<script src="__MES__/mescroll.min.js" charset="UTF-8"></script>-->
+<script src="__ED__/lib/marked.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/prettify.min.js" charset="UTF-8"></script>
+<!-- Cause bug with bootstrap.js, replace with eve.js & new raphael.js -->
+<!-- <script src="__ED__/lib/raphael_old.min.js" charset="UTF-8"></script> -->
+<script src="__JS__/eve.js" charset="UTF-8"></script>
+<script src="__ED__/lib/raphael.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/underscore.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/sequence-diagram.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/flowchart.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/jquery.flowchart.min.js" charset="UTF-8"></script>
+<script src="__ED__/editormd.min.js" charset="UTF-8"></script>
+<script type="text/javascript">
+    $(function () {
+        $('#lnk-index').addClass('active');
+
+        editormd.emoji.path = 'http://www.webpagefx.com/tools/emoji-cheat-sheet/graphics/emojis/';
+        editormd.katexURL = {
+            css: "__KATEX__/katex.min",
+            js: "__KATEX__/katex.min"
+        };
+
+        $('a[data-bs-toggle="collapse"]').click(function () {
+            if ($(this).attr('aria-expanded') === 'true') {
+                $(this).find('span').html('-');
+            } else {
+                $(this).find('span').html('+');
+            }
+        });
+
+        /*function downCallback() {
+            if (init()) {
+                meScroll.endSuccess();
+            } else {
+                meScroll.endErr();
+            }
+        }
+
+        let meScroll = new MeScroll('div-meScroll', {
+            up: {
+                use: false
+            },
+            down: {
+                callback: downCallback,
+                textInOffset: '{$Think.lang.sys.refresh.pull.down}',
+                textOutOffset: '{$Think.lang.sys.update.release}',
+                textLoading: '{$Think.lang.sys.load.help}'
+            }
+        });*/
+
+        let ROW_PER_PAGE = DEFAULT_ROW_NUMBER;
+        let ROW_TOTAL;
+        let PAGE_NOW = parseInt('{$Request.get.p??1}');
+        let PAGE_TOTAL;
+        let PAGE_DISPLAY_HALF_LENGTH = DEFAULT_PAGE_DISPLAY_HALF_LENGTH;
+
+        let SEARCH_URI = decodeURIComponent('{$Request.get.sc|raw}');
+        let CATEGORY_ALIAS = '{$Request.get.ca}';
+        let AUTHOR_ID = '{$Request.get.auid}';
+
+        $('#txt-search').val(SEARCH_URI);
+
+        let categoryActivated = $('#div-category').find('button[c-alias="' + CATEGORY_ALIAS + '"]');
+        if (categoryActivated.length === 1) {
+            categoryActivated.addClass('active');
+            while (!categoryActivated.parent().hasClass('list-group')) {
+                categoryActivated = categoryActivated.parent();
+                let parentId = categoryActivated.attr('id').split('div-collapse_')[1];
+                $('a[data-bs-target="#div-collapse_' + parentId + '"]').find('span').html('-');
+                categoryActivated.collapse('show');
+            }
+        }
+
+        $('#div-category').find('button').click(function () {
+            if ($(this).hasClass('active')) {
+                CATEGORY_ALIAS = '';
+            } else {
+                CATEGORY_ALIAS = $(this).attr('c-alias');
+            }
+            location.href = getURL(1);
+        });
+
+        $('#btn-author').click(function () {
+            location.href = getURL(1, SEARCH_URI, CATEGORY_ALIAS, '');
+        });
+
+        function getURL(page, search, categoryAlias, authorId) {
+            let url_string = '/Index/index?p=' + (page !== undefined ? page : PAGE_NOW) + '&sc=' + encodeURIComponent(search !== undefined ? search : (SEARCH_URI !== undefined ? SEARCH_URI : '')).replace(/%/g, '%25') + '&ca=' + (categoryAlias !== undefined ? categoryAlias : CATEGORY_ALIAS) + '&auid=' + (authorId !== undefined ? authorId : AUTHOR_ID);
+            return url_string;
+        }
+
+        function checkPageNumber(obj) {
+            let pageNumber = parseInt(obj.val());
+            if (pageNumber > 0 && pageNumber <= PAGE_TOTAL) {
+                //location.href = getURL(pageNumber);
+                return pageNumber;
+            } else if (pageNumber <= 0) {
+                //location.href = getURL(1);
+                return false;
+            } else if (pageNumber > PAGE_TOTAL) {
+                //location.href = getURL(PAGE_TOTAL);
+                return false;
+            } else {
+                return false;
+            }
+        }
+
+        function setPage(isValid) {
+            if (isValid) {
+                $('#txt-page').removeClass('is-invalid');
+                $('#txt-page').parent().parent().removeClass('is-invalid');
+            } else {
+                $('#txt-page').addClass('is-invalid');
+                $('#txt-page').parent().parent().addClass('is-invalid');
+            }
+        }
+
+        function setPageXs(isValid) {
+            if (isValid) {
+                $('#txt-page-xs').removeClass('is-invalid');
+            } else {
+                $('#txt-page-xs').addClass('is-invalid');
+            }
+        }
+
+        function initPageController() {
+            let pageLinkHTML = '';
+            let pageLinkHTMLLeftPart = PAGE_NOW > PAGE_DISPLAY_HALF_LENGTH ? PAGE_NOW - PAGE_DISPLAY_HALF_LENGTH : 1;
+            let pageLinkHTMLRightPartAdjustment = PAGE_DISPLAY_HALF_LENGTH - (PAGE_NOW - pageLinkHTMLLeftPart);
+            let pageLinkHTMLRightPart = PAGE_TOTAL - PAGE_NOW > PAGE_DISPLAY_HALF_LENGTH + pageLinkHTMLRightPartAdjustment ? PAGE_NOW + PAGE_DISPLAY_HALF_LENGTH
+                + pageLinkHTMLRightPartAdjustment : PAGE_TOTAL;
+            let pageLinkHTMLLeftPartAdjustment = PAGE_DISPLAY_HALF_LENGTH - (pageLinkHTMLRightPart - PAGE_NOW);
+            pageLinkHTMLLeftPart = PAGE_NOW > PAGE_DISPLAY_HALF_LENGTH + pageLinkHTMLLeftPartAdjustment ? PAGE_NOW - PAGE_DISPLAY_HALF_LENGTH - pageLinkHTMLLeftPartAdjustment : 1;
+            if (PAGE_NOW > 1) {
+                pageLinkHTML += '<a href="' + getURL(PAGE_NOW - 1) + '" class="btn btn-outline-secondary btn-border-secondary"><</a>';
+            }
+            if (pageLinkHTMLLeftPart > 1) {
+                pageLinkHTML += '<a href="' + getURL(1) + '" class="btn btn-outline-secondary btn-border-secondary">1' + (pageLinkHTMLLeftPart > 2 ? '...' : '') + '</a>';
+            }
+            for (let i = pageLinkHTMLLeftPart; i < PAGE_NOW; i++) {
+                pageLinkHTML += '<a href="' + getURL(i) + '" class="btn btn-outline-secondary btn-border-secondary">' + i + '</a>';
+            }
+            pageLinkHTML += '<a href="' + getURL(PAGE_NOW) + '" class="btn btn-outline-secondary active">' + PAGE_NOW + '</a>';
+            for (let i = PAGE_NOW + 1; i <= pageLinkHTMLRightPart; i++) {
+                pageLinkHTML += '<a href="' + getURL(i) + '" class="btn btn-outline-secondary btn-border-secondary">' + i + '</a>';
+            }
+            if (pageLinkHTMLRightPart < PAGE_TOTAL) {
+                pageLinkHTML += '<a href="' + getURL(PAGE_TOTAL) + '" class="btn btn-outline-secondary btn-border-secondary">' + (PAGE_TOTAL - pageLinkHTMLRightPart > 1 ? '...' + PAGE_TOTAL : PAGE_TOTAL) + '</a>';
+            }
+            if (PAGE_NOW < PAGE_TOTAL) {
+                pageLinkHTML += '<a href="' + getURL(PAGE_NOW + 1) + '" class="btn btn-outline-secondary btn-border-secondary">></a>';
+            }
+
+            $('#div-page').html(pageLinkHTML);
+
+            $('#txt-page').bind('input propertychange', function () {
+                setPage(checkPageNumber($(this)));
+            });
+
+            $('#btn-turnToPage').click(function () {
+                let pageNumber = checkPageNumber($('#txt-page'));
+                if (pageNumber) {
+                    location.href = getURL(pageNumber);
+                } else {
+                    setPage(false);
+                }
+            });
+
+            pageLinkHTML += '<button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalPage">{$Think.lang.page.turnTo}</button>';
+
+            $('#div-page-xs').html(pageLinkHTML);
+
+            $('#txt-page-xs').bind('input propertychange', function () {
+                setPageXs(checkPageNumber($(this)))
+            });
+
+            $('#btn-turnToPage-xs').click(function () {
+                let pageNumber = checkPageNumber($('#txt-page-xs'));
+                if (pageNumber) {
+                    location.href = getURL(pageNumber);
+                } else {
+                    setPageXs(false);
+                }
+            });
+        }
+
+        function init() {
+            //Init page controller
+            ROW_TOTAL = parseInt('{$total}');
+            PAGE_TOTAL = parseInt(ROW_TOTAL / ROW_PER_PAGE) < (ROW_TOTAL / ROW_PER_PAGE) ? parseInt(ROW_TOTAL / ROW_PER_PAGE) + 1 : parseInt(ROW_TOTAL / ROW_PER_PAGE);
+            PAGE_TOTAL = PAGE_TOTAL > 0 ? PAGE_TOTAL : 1;
+            PAGE_NOW = PAGE_NOW > PAGE_TOTAL ? PAGE_TOTAL : PAGE_NOW;
+            PAGE_NOW = PAGE_NOW < 1 ? 1 : PAGE_NOW;
+            $('#txt-page').attr('max', PAGE_TOTAL);
+            $('#txt-page-xs').attr('max', PAGE_TOTAL);
+            let pageRange = PAGE_TOTAL > 1 ? '1-' + PAGE_TOTAL : PAGE_TOTAL;
+            $('#txt-page').attr('title', '{$Think.lang.page.invalid.help}' + pageRange);
+            $('#txt-pageInvalidHelp').text('{$Think.lang.page.invalid.help}' + pageRange);
+            $('#txt-pageInvalidHelp-xs').text('{$Think.lang.page.invalid.help}' + pageRange);
+            initPageController();
+
+            $('.card-body').each(function () {
+                let markdown = $(this).find('div[a-markdown]');
+                if (markdown.length === 1) {
+                    markdown.find('div').remove();
+                    editormd.markdownToHTML(markdown.attr('id'), {
+                        //htmlDecode: true,       // 开启 HTML 标签解析，为了安全性，默认不开启
+                        htmlDecode: 'style,script,iframe',  // you can filter tags decode
+                        //toc: false,
+                        tocm: true,    // Using [TOCM]
+                        //tocContainer: '#custom-toc-container', // 自定义 ToC 容器层
+                        //gfm: false,
+                        //tocDropdown: true,
+                        //markdownSourceCode: true, // 是否保留 Markdown 源码，即是否删除保存源码的 Textarea 标签
+                        emoji: true,
+                        taskList: true,
+                        tex: true,  // 默认不解析
+                        flowChart: true,  // 默认不解析
+                        sequenceDiagram: true,  // 默认不解析
+                    });
+                }
+            });
+        }
+
+        init();
+
+        $('#txt-search').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-search').click();
+            }
+        });
+
+        $('#btn-search').click(function () {
+            SEARCH_URI = $('#txt-search').val().trim();
+            location.href = getURL();
+        });
+
+        $(document).keydown(function (e) {
+            if (e.keyCode == 37) {
+                location.href = getURL(--PAGE_NOW > 0 ? PAGE_NOW : 1);
+            }
+            if (e.keyCode == 39) {
+                location.href = getURL(++PAGE_NOW > PAGE_TOTAL ? PAGE_TOTAL : PAGE_NOW);
+            }
+        });
+    });
+</script>
+{/block}

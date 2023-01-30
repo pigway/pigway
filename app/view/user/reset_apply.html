@@ -1,0 +1,130 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.password.reset.apply}{/block}
+{block name="head-extra"}
+<style type="text/css">
+</style>
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$Think.lang.user.password.reset.username.help}</div>
+        <div class="card-body">
+            <div class="row">
+                <label for="txt-username"
+                       class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.username}</label>
+                <div class="col-sm-9">
+                    <input id="txt-username" type="text" class="form-control">
+                    <div id="div-usernameInvalidFeedback" class="invalid-feedback"></div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-sm-2 offset-sm-3">
+                    <button id="btn-apply" class="btn btn-secondary text-nowrap"><span
+                            class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                            aria-hidden="true"></span>{$Think.lang.sys.apply}
+                    </button>
+                </div>
+                <div class="col-sm-7 d-flex justify-content-end align-items-end pb-1 initialism">
+                    <a href="/User/find" class="text-silence text-decoration-none">{$Think.lang.user.username.find}</a>
+                </div>
+            </div>
+            {:token_meta()}
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        function checkUsername() {
+            let username = $('#txt-username').val();
+
+            if (username.length > 0) {
+                if ($.testUsername(username)) {
+                    // 原始类型的数据会转换成数值类型再进行比较，下文的'{$Think.config.app.username_min_length}'字符串类型属于原始类型，在比较时会转为数值型
+                    if (username.length >= '{$Think.config.app.username_min_length}' && username.length <= '{$Think.config.app.username_max_length}') {
+                        $('#div-usernameInvalidFeedback').empty();
+                        $('#txt-username').removeClass('is-invalid').addClass('is-valid');
+
+                        return true;
+                    } else {
+                        $('#div-usernameInvalidFeedback').text('{$Think.lang.user.username.length.error}');
+                        $('#txt-username').removeClass('is-valid').addClass('is-invalid');
+                    }
+                } else {
+                    $('#div-usernameInvalidFeedback').text('{$Think.lang.user.username.format.error}');
+                    $('#txt-username').removeClass('is-valid').addClass('is-invalid');
+                }
+            } else {
+                $('#div-usernameInvalidFeedback').text('{$Think.lang.user.username.required}');
+                $('#txt-username').removeClass('is-valid').addClass('is-invalid');
+            }
+
+            return false;
+        }
+
+        $('#txt-username').bind('input propertychange', function () {
+            checkUsername();
+        });
+
+        $('#txt-username').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-apply').click();
+            }
+        });
+
+        $('#btn-apply').click(function () {
+            if (checkUsername()) {
+                $.ajax({
+                    type: 'post',
+                    url: '/User/verifyUsername',
+                    timeout: AJAX_TIME_OUT,
+                    async: true,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        username: $('#txt-username').val()
+                    },
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('#btn-apply').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                    },
+                    success: function (jsonData) {
+                        if (jsonData === undefined) {
+                            return toastAjaxResult();
+                        }
+                        if (jsonData.__token__ !== undefined) {
+                            $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                        }
+
+                        let result = jsonData.result;
+                        if (result === DONE) { // 验证通过
+                            return location.href = '/User/resetVerify';
+                        } else if (result === INPUT_ERROR) { // 输入错误
+                            switch (jsonData.err.code) {
+                                case USERNAME_REQUIRE:
+                                case USERNAME_LENGTH:
+                                case USERNAME_FORMAT:
+                                    $('#div-usernameInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-username').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else {
+                            toastAjaxResult(result, getErrorMessage(jsonData));
+                        }
+                    },
+                    error: function () {
+                        toastAjaxResult();
+                    },
+                    complete: function () {
+                        $('#btn-apply').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{/block}

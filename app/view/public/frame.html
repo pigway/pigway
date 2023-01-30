@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta content="black" name="apple-mobile-web-app-status-bar-style">
+    <meta content="telephone=no" name="format-detection">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=9"/>
+    <meta name="Keywords" content="{$Think.lang.app.keywords}">
+    <meta name="Description" content="{$Think.lang.app.description}">
+    <title>{block name="subtitle"}{/block} &middot; {$Think.lang.app.brand}
+    </title>
+    <!-- Style -->
+    <!-- HTML5 shim, Respond.js and css3-mediaqueries IE8 support of HTML5 elements and media queries (use css3-mediaqueries instead Respond.js) -->
+    <!--[if lt IE 9]>
+    <script src="__JS__/html5shiv-printshiv.min.js" charset="UTF-8"></script>
+    <script src="__JS__/css3-mediaqueries.js" charset="UTF-8"></script>
+    <![endif]-->
+    <link href="__BS__/bootstrap.min.css" rel="stylesheet">
+    <link href="__FA__/css/fontawesome.css" rel="stylesheet">
+    <link href="__FA__/css/brands.css" rel="stylesheet">
+    <link href="__FA__/css/solid.css" rel="stylesheet">
+    <link href="__CSS__/Markdown.css" rel="stylesheet">
+    <link href="__CSS__/Wayne.css" rel="stylesheet">
+    <style type="text/css">
+        #think_page_trace_open { /* 调试使用，生产环境注释 */
+            z-index: 999999;
+        }
+
+        .toast-body {
+            overflow: auto; /* 解决部分情况下 toast body 显示文字异常的情况 */
+        }
+    </style>
+    {block name="head-extra"}{/block}
+</head>
+<!-- 防止部分手机浏览器下拉隐藏顶部navbar -->
+<body class="bg-light" style="position: fixed; width: 100%; height: 100vh!important">
+<nav id="navbar" class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a href="/" class="navbar-brand">{$Think.lang.app.brand}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#div-navbarContent"
+                aria-controls="div-navbarContent" aria-expanded="false" aria-label="{$Think.lang.nav.toggle}">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="div-navbarContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a id="lnk-index" class="nav-link" aria-current="page" href="/">{$Think.lang.nav.index}</a>
+                </li>
+                {:extraMenu()}
+            </ul>
+            <div class="d-flex">
+                <!--<div class="input-group">
+                    <input class="form-control" type="search" placeholder="{$Think.lang.sys.search}"
+                           aria-label="{$Think.lang.sys.search}">
+                    <button class="btn btn-outline-secondary" type="button">{$Think.lang.sys.search}</button>
+                </div>-->
+                {if isNanoid($Request.session.uid)}
+                <div class="text-nowrap">
+                    <a href="/User/center" class="btn btn-outline-secondary">{$Think.lang.user.center}</a>
+                </div>
+                <div class="text-nowrap ms-2">
+                    <a href="/User/logout" class="btn btn-outline-secondary">{$Think.lang.user.logout}</a>
+                </div>
+                {else /}
+                <div class="text-nowrap">
+                    <a href="/User/signIn" class="btn btn-outline-secondary">{$Think.lang.user.sign.in}</a>
+                </div>
+                {/if}
+            </div>
+        </div>
+    </div>
+</nav>
+<div id="block-content"
+     style="margin-top: 56px; margin-bottom: 37px; width: 100%; position: fixed; top: 0; bottom: 0; overflow-y: auto">
+    <!-- Begin page content -->
+    {block name="main-content"}{/block}
+</div>
+<nav id="footer" class="navbar fixed-bottom navbar-dark bg-dark">
+    <div class="container-fluid text-silence">
+        <small class="mx-auto">&copy;{$Think.lang.app.copyright.year} <a
+                href="/Index/about"
+                class="text-silence">{$Think.lang.app.author}</a>
+            · <a href="http://beian.miit.gov.cn" target="_blank"
+                 class="text-silence">{$Think.lang.app.ICP}</a></small>
+    </div>
+</nav>
+<div id="div-toastContainer" class="position-fixed bottom-0 end-0 p-1 toast-container"
+     style="margin-bottom: 37px; z-index: 11"></div>
+{block name="modal"}{/block}
+<script src="__JS__/jquery-3.6.0.min.js" charset="UTF-8"></script>
+<script src="__BS__/bootstrap.bundle.min.js" charset="UTF-8"></script>
+<script src="__JS__/timeago.min.js" charset="UTF-8"></script>
+<script src="__JS__/js.cookie.min.js" charset="UTF-8"></script>
+<script src="__JS__/extend.js" charset="UTF-8"></script>
+<script type="text/javascript">
+    let AJAX_TIME_OUT = '{$Think.config.app.ajax_time_out}';
+    let DEFAULT_ROW_NUMBER = parseInt('{$Think.config.app.default_row_number}');
+    let DEFAULT_PAGE_DISPLAY_HALF_LENGTH = parseInt('{$Think.config.app.default_page_display_half_length}');
+
+    let LAST_SCREEN_HEIGHT = $(window).height();
+    let LAST_SCREEN_WIDTH = $(window).width();
+    let LAST_NAVBAR_HEIGHT = $('#navbar').outerHeight(true);
+    let LAST_FOOTER_HEIGHT = $('#footer').outerHeight(true);
+
+    let TIME_AGO_LANG = '{$Think.lang.timeAgo.lang}';
+
+    let TOAST_INFO = 0;
+    let TOAST_SUCCESS = 1;
+    let TOAST_WARNING = 2;
+    let TOAST_ERROR = 3;
+
+    const FAILED = 0;
+    const DONE = 1;
+    const INPUT_ERROR = -1;
+    const TOKEN_ERROR = -2;
+    const REQUEST_ERROR = -3;
+    const SESSION_ERROR = -4;
+    const DATA_REMOVED = -5;
+    const DATA_LOCKED = -6;
+    const DATA_NONE = -7;
+    const DATABASE_ERROR = -8;
+    const SYSTEM_ERROR = -9;
+    const RIGHT_ERROR = -10;
+    const EMAIL_SERVICE_ERROR = -11;
+    const MOBILE_PHONE_SERVICE_ERROR = -12;
+
+    const USERNAME_REQUIRE = 10001;
+    const USERNAME_LENGTH = 10010;
+    const USERNAME_FORMAT = 10100;
+    const USERNAME_MISMATCH = 11000;
+
+    const PASSWORD_REQUIRE = 20001;
+    const PASSWORD_LENGTH = 20010;
+    const PASSWORD_FORMAT = 20100;
+    const PASSWORD_MISMATCH = 21000;
+
+    const CAPTCHA_REQUIRE = 50001;
+    const CAPTCHA_LENGTH = 50010;
+    const CAPTCHA_FORMAT = 50100;
+    const CAPTCHA_MISMATCH = 51000;
+
+    const METHOD_REQUIRE = 60001;
+    const METHOD_LENGTH = 60010;
+    const METHOD_FORMAT = 60100;
+    const METHOD_MISMATCH = 61000;
+
+    const EMAIL_ADDRESS_REQUIRE = 70001;
+    const EMAIL_ADDRESS_FORMAT = 70100;
+    const EMAIL_ADDRESS_MISMATCH = 71000;
+
+    const MOBILE_PHONE_NUMBER_REQUIRE = 80001;
+    const MOBILE_PHONE_NUMBER_FORMAT = 80100;
+    const MOBILE_PHONE_NUMBER_MISMATCH = 81000;
+
+    const SMS_VERIFICATION_CODE_REQUIRE = 90001;
+    const SMS_VERIFICATION_CODE_LENGTH = 90010;
+    const SMS_VERIFICATION_CODE_FORMAT = 90100;
+    const SMS_VERIFICATION_CODE_MISMATCH = 91000;
+
+    const UPLOAD_FILE_ILLEGAL = 100001;
+    const UPLOAD_FILE_SIZE_LIMIT = 100010;
+    const UPLOAD_FILE_EXTENSION_LIMIT = 100100;
+    const UPLOAD_FILE_MIME_TYPE_LIMIT = 101000;
+
+    const METHOD_EMAIL = 1;
+    const METHOD_MOBILE_PHONE = 2;
+
+    const SCENE_RESET_PASSWORD_BY_EMAIL = 27;
+    const SCENE_RESET_PASSWORD_BY_MOBILE_PHONE = 28;
+
+    const ARTICLE_AUTHOR_TYPE_CREATOR = 0;
+
+    if (Cookies.get('urlNow') !== undefined) {
+        Cookies.set('urlPrev', Cookies.get('urlNow'));
+    }
+    Cookies.set('urlNow', window.location.pathname + window.location.search);
+
+    let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    function getLevelClass(level) {
+        switch (level) {
+            case TOAST_INFO:
+                return 'text-white bg-info';
+            case TOAST_SUCCESS:
+                return 'text-white bg-success';
+            case TOAST_WARNING:
+                return 'text-white bg-warning';
+            case TOAST_ERROR:
+                return 'text-white bg-danger';
+                break;
+        }
+    }
+
+    function easyToast(level, html, autoHide = true) {
+        let randomId = 'easyToast_' + $.GUID();
+        $('#div-toastContainer').append(
+            '<div id="' + randomId + '" class="toast align-items-center ' + getLevelClass(level) + ' border-0" data-bs-autohide="' + autoHide + '" role="alert" aria-live="assertive" aria-atomic="true">'
+            + '<div class="d-flex">'
+            + '<div class="toast-body">'
+            + html
+            + '</div>'
+            + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+            + '</div>'
+            + '</div>'
+        );
+        $('#' + randomId).on('hidden.bs.toast', function () {
+            $(this).toast('dispose');
+        }).toast('show');
+        return randomId;
+    }
+
+    function toastAjaxResult(result, message) {
+        if (result === INPUT_ERROR) { // 输入错误
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.input.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === TOKEN_ERROR) { // 重复提交或长时间滞留页面
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.token.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === REQUEST_ERROR) { // 请求已失效
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.request.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === SESSION_ERROR) { // Session错误
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.session.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === DATA_REMOVED) { // 数据已移除
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.data.removed.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === DATA_LOCKED) { // 数据已锁定
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.data.locked.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === DATA_NONE) { // 无数据
+            easyToast(TOAST_WARNING, '{$Think.lang.warning.data.none.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === DATABASE_ERROR) { // 数据库错误
+            easyToast(TOAST_ERROR, '{$Think.lang.error.database.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === SYSTEM_ERROR) { // 系统错误
+            easyToast(TOAST_ERROR, '{$Think.lang.error.system.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === RIGHT_ERROR) { // 权限错误
+            easyToast(TOAST_ERROR, '{$Think.lang.error.right.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === EMAIL_SERVICE_ERROR) { // 邮件服务器错误
+            easyToast(TOAST_ERROR, '{$Think.lang.error.email.service.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else if (result === MOBILE_PHONE_SERVICE_ERROR) { // 手机服务错误
+            easyToast(TOAST_ERROR, '{$Think.lang.error.mobile.phone.service.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        } else { // 未知异常
+            easyToast(TOAST_ERROR, '{$Think.lang.error.unknown.help}' + (message !== undefined ? ' [' + message + ']' : ''), true);
+        }
+    }
+
+    function getErrorMessage(jsonData) {
+        if (jsonData.err !== undefined && jsonData.err.msg !== undefined) {
+            return jsonData.err.msg;
+        }
+        return undefined;
+    }
+
+    function fixLayoutContainerSpacing() {
+        $('#block-content').css('margin-top', LAST_NAVBAR_HEIGHT + 'px').css('margin-bottom', LAST_FOOTER_HEIGHT);
+        $('#div-toastContainer').css('margin-bottom', LAST_FOOTER_HEIGHT + 'px');
+        if ($('.mescroll').length === 1) {
+            $('.mescroll').css('top', LAST_NAVBAR_HEIGHT + 'px').css('bottom', LAST_FOOTER_HEIGHT + 'px');
+        }
+    }
+
+    fixLayoutContainerSpacing();
+
+    $(window).resize(function () {
+        if (LAST_SCREEN_HEIGHT !== $(window).height() || LAST_NAVBAR_HEIGHT !== $('#navbar').outerHeight(true) || LAST_FOOTER_HEIGHT !== $('#footer').outerHeight(true)) {
+            LAST_SCREEN_HEIGHT = $(window).height();
+            LAST_NAVBAR_HEIGHT = $('#navbar').outerHeight(true);
+            LAST_FOOTER_HEIGHT = $('#footer').outerHeight(true);
+
+            fixLayoutContainerSpacing();
+        }
+    });
+
+    function initTooltip() {
+        let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    }
+
+    /**
+     * Pretty print a size from bytes
+     * @param {Number} size The number to pretty print
+     * @param {Boolean} [noSpace=false] Don't print a space
+     * @param {Boolean} [lang=false] Print local language unit
+     * @param {Boolean} [one=false] Unit only print one character when lang is false
+     * @param {Number} [places=1] Number of decimal places to return
+     * @param {Boolean} [numOnly=false] Return only the converted number and not size string
+     * @returns {string|number}
+     */
+    function prettySize(size, noSpace, lang, one, places, numOnly) {
+        let sizeUnit = [
+            'Byte', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'
+        ];
+        let sizeUnitLang = [
+            '{$Think.lang.unit.byte}', '{$Think.lang.unit.KB}', '{$Think.lang.unit.MB}', '{$Think.lang.unit.GB}', '{$Think.lang.unit.TB}', '{$Think.lang.unit.PB}', '{$Think.lang.unit.EB}', '{$Think.lang.unit.ZB}', '{$Think.lang.unit.YB}'
+        ];
+
+        if (typeof noSpace === 'object') {
+            let opts = noSpace;
+            noSpace = opts.noSpace;
+            lang = opts.lang;
+            one = opts.one;
+            places = opts.places || 1;
+            numOnly = opts.numOnly;
+        } else {
+            places = places || 1;
+        }
+
+        let pretty;
+
+        for (let id = 0; id < sizeUnit.length; ++id) {
+            let unit = sizeUnit[id];
+            let unitLang = sizeUnitLang[id];
+
+            if (one) {
+                unit = unit.slice(0, 1);
+            }
+
+            let s = Math.pow(1024, id);
+            let fixed;
+            if (size >= s) {
+                fixed = String((size / s).toFixed(places));
+                if (fixed.indexOf('.0') === fixed.length - 2) {
+                    fixed = fixed.slice(0, -2);
+                }
+                pretty = fixed + (noSpace ? '' : ' ') + (lang ? unitLang : unit);
+            }
+        }
+
+        // zero handling
+        // always prints in Bytes
+        if (!pretty) {
+            let _unit = lang ? sizeUnitLang[0] : (one ? sizeUnit[0].slice(0, 1) : sizeUnit[0]);
+            pretty = '0' + (noSpace ? '' : ' ') + _unit;
+        }
+
+        if (numOnly) {
+            pretty = Number.parseFloat(pretty);
+        }
+
+        return pretty;
+    }
+</script>
+{block name="js"}{/block}
+</body>
+</html>

@@ -1,0 +1,34 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.sys.report}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$title??$Think.lang.error.unknown}</div>
+        <div class="card-body">
+            <p class="card-text">{$content??$Think.lang.error.unknown.help} <a
+                    href="{$Request.cookie.urlNow==$Request.url?'/':($Request.cookie.urlNow??'/')}">{$url=($Request.cookie.urlNow==$Request.url?'/':($Request.cookie.urlNow??'/'))=='/'?$Think.lang.nav.index:$Think.lang.sys.back}</a>
+            </p>
+            <hr class="my-1"/>
+            <small class="text-silence">{$Think.lang.error.system.feedback.click.help}<a
+                    href="mailto:{$Think.lang.app.author.email}?subject={$title??$Think.lang.error.unknown}&body={$Think.lang.sys.report.content}{$Think.lang.punc.colon}{$content??$Think.lang.error.unknown.help}%0A{$Think.lang.sys.time}{$Think.lang.punc.colon}{:date('Y-m-d H:i:s')}%0A{$Think.lang.sys.ip.address}{$Think.lang.punc.colon}{$Request.ip}%0A{$Think.lang.user.display.number}{$Think.lang.punc.colon}{$Request.session.display_number??$Think.lang.user.sign.in.not}%0A{$Think.lang.sys.url.address.wrong}{$Think.lang.punc.colon}{$Request.url}">{$Think.lang.sys.feedback}</a></small>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        // 因为模板渲染在frame js执行前，渲染出来的urlNow是之前页面的数据，故此处重新抓取urlNow为之前页面，避免刷新本页后失去返回页面
+        if (Cookies.get('urlPrev') !== undefined) {
+            Cookies.set('urlNow', Cookies.get('urlPrev'));
+        } else {
+            Cookies.remove('urlPrev');
+        }
+        Cookies.remove('urlPrev');
+    });
+</script>
+{/block}

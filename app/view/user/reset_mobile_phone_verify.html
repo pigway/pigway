@@ -1,0 +1,201 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.mobile.phone.number.verify}{/block}
+{block name="head-extra"}
+<style type="text/css">
+</style>
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$Think.lang.user.mobile.phone.number.verify.help}</div>
+        <div class="card-body">
+            <div class="row">
+                <label for="txt-verificationCode"
+                       class="col-sm-3 col-form-label text-sm-end">{$Think.lang.sms.verification.code}</label>
+                <div class="col-sm-9">
+                    <div class="input-group has-validation">
+                        <span class="input-group-text"><span role="i">{$Request.param.i}</span></span>
+                        <input id="txt-verificationCode" type="text" class="form-control">
+                        <button id="btn-resendVerificationCode" class="btn btn-secondary" type="button" disabled><span
+                                class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                                aria-hidden="true"></span><span id="span-resendVerificationCode">{$Think.lang.sys.sent} ({$Think.config.app.aliyun_send_sms_count_down}{$Think.lang.unit.second})</span>
+                        </button>
+                        <div id="div-verificationCodeInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <small class="text-silence">{:lang('sms.verification.code.input.help',['idCode'=>$Request.param.i,'length'=>$Think.config.app.aliyun_sms_reset_password_code_length])}</small>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-sm-2 offset-sm-3">
+                    <button id="btn-verify" class="btn btn-secondary text-nowrap"><span
+                            class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                            aria-hidden="true"></span>{$Think.lang.sys.verify}
+                    </button>
+                </div>
+            </div>
+            {:token_meta()}
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        function setResendVerificationCode(sec) {
+            $('#span-resendVerificationCode').html('{$Think.lang.sys.sent} (' + sec + '{$Think.lang.unit.second})');
+        }
+
+        function endResendVerificationCodeCountDown() {
+            $('#span-resendVerificationCode').html('{$Think.lang.sys.resend}').parent().removeAttr('disabled');
+        }
+
+        $.startCountDown('{$Think.config.app.aliyun_send_sms_count_down}' - 1, setResendVerificationCode, endResendVerificationCodeCountDown);
+
+        $('#btn-resendVerificationCode').click(function () {
+            $.ajax({
+                type: 'post',
+                url: '/User/resendResetMobilePhoneVerificationCode',
+                timeout: AJAX_TIME_OUT,
+                async: true,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                data: {
+                    user: '{$Request.param.u}',
+                    scene: '{$Request.param.sc}',
+                    idCode: '{$Request.param.i}'
+                },
+                dataType: 'json',
+                beforeSend: function () {
+                    $('#btn-resendVerificationCode').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                },
+                success: function (jsonData) {
+                    if (jsonData === undefined) {
+                        $('#btn-resendVerificationCode').removeAttr('disabled');
+                        return easyToast(3, '{$Think.lang.error.system}');
+                    }
+                    if (jsonData.__token__ !== null) {
+                        $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                    }
+
+                    let result = jsonData.result;
+                    if (result === DONE) {
+                        /*$('#btn-resendVerificationCode').attr('disabled', true);
+                        setResendVerificationCode('{$Think.config.app.aliyun_send_sms_count_down}');
+                        $.startCountDown('{$Think.config.app.aliyun_send_sms_count_down}' - 1, setResendVerificationCode, endResendVerificationCodeCountDown);*/
+                        return location.href = '/User/resetMobilePhoneVerify?u={$Request.param.u}&sc={$Request.param.sc}&i=' + jsonData.idCode;
+                    } else {
+                        $('#btn-resendVerificationCode').removeAttr('disabled');
+                        toastAjaxResult(result, getErrorMessage(jsonData));
+                    }
+                },
+                error: function () {
+                    $('#btn-resendVerificationCode').removeAttr('disabled');
+                    toastAjaxResult();
+                },
+                complete: function () {
+                    $('#btn-resendVerificationCode').find('[role="status"]').addClass('d-none');
+                }
+            });
+        });
+
+        function checkVerificationCode() {
+            let verificationCode = $('#txt-verificationCode').val();
+            if (verificationCode.length == '{$Think.config.app.aliyun_sms_reset_password_code_length}') {
+                if ($.isNumeric(verificationCode)) {
+                    $('#div-verificationCodeInvalidFeedback').empty();
+                    $('#txt-verificationCode').removeClass('is-invalid').addClass('is-valid');
+                    return true;
+                } else {
+                    $('#div-verificationCodeInvalidFeedback').text('{$Think.lang.sms.verification.code.format.error}');
+                    $('#txt-verificationCode').removeClass('is-valid').addClass('is-invalid');
+                }
+            } else if (verificationCode.length === 0) {
+                $('#div-verificationCodeInvalidFeedback').text('{$Think.lang.sms.verification.code.required}');
+                $('#txt-verificationCode').removeClass('is-valid').addClass('is-invalid');
+            } else {
+                $('#div-verificationCodeInvalidFeedback').text('{$Think.lang.sms.verification.code.format.error}');
+                $('#txt-verificationCode').removeClass('is-valid').addClass('is-invalid');
+            }
+            return false;
+        }
+
+        $('#txt-verificationCode').bind('input propertychange', function () {console.log(this.value);
+            this.value = this.value.match(/\d+/); // 单纯用input type="number" 会有E输入错误（E在数学上代表 2.71828）
+            if (this.value.length > '{$Think.config.app.aliyun_sms_reset_password_code_length}') {
+                this.value = this.value.slice(0, '{$Think.config.app.aliyun_sms_reset_password_code_length}');
+            }
+            checkVerificationCode();
+        });
+
+        $('#txt-verificationCode').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-verify').click();
+            }
+        });
+
+        $('#btn-verify').click(function () {
+            if (checkVerificationCode()) {
+                $.ajax({
+                    type: 'post',
+                    url: '/User/verifyResetMobilePhoneVerificationCode',
+                    timeout: AJAX_TIME_OUT,
+                    async: true,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        user: '{$Request.param.u}',
+                        scene: '{$Request.param.sc}',
+                        idCode: '{$Request.param.i}',
+                        code: $('#txt-verificationCode').val()
+                    },
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('#btn-verify').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                    },
+                    success: function (jsonData) {
+                        if (jsonData === undefined) {
+                            return toastAjaxResult();
+                        }
+                        if (jsonData.__token__ !== null) {
+                            $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                        }
+
+                        let result = jsonData.result;
+                        if (result === DONE) { // 验证通过
+                            return location.href = '/User/reset?u=' + '{$Request.param.u}' + '&sc=' + '{$Request.param.sc}' + '&i=' + '{$Request.param.i}' + '&c=' + $('#txt-verificationCode').val();
+                        } else if (result === FAILED) { // 验证未通过
+                            switch (jsonData.err.code) {
+                                case SMS_VERIFICATION_CODE_MISMATCH:
+                                    $('#div-verificationCodeInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-verificationCode').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else if (result === INPUT_ERROR) { // 输入错误
+                            switch (jsonData.err.code) {
+                                case SMS_VERIFICATION_CODE_REQUIRE:
+                                case SMS_VERIFICATION_CODE_LENGTH:
+                                case SMS_VERIFICATION_CODE_FORMAT:
+                                    $('#div-verificationCodeInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-verificationCode').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else {
+                            toastAjaxResult(result, getErrorMessage(jsonData));
+                        }
+                    },
+                    error: function () {
+                        toastAjaxResult();
+                    },
+                    complete: function () {
+                        $('#btn-verify').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{/block}

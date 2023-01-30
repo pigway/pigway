@@ -1,0 +1,25 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.logout}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$title}</div>
+        <div class="card-body">
+            <p class="card-text">{$content}</p>
+            <hr class="my-1"/>
+            <small class="text-silence">{$Think.lang.user.sign.in.again.click.help}<a href="/User/signIn">{$Think.lang.user.sign.in}</a></small>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    if (Cookies.get('urlPrev') !== undefined) {
+        Cookies.set('urlNow', Cookies.get('urlPrev'));
+    }
+</script>
+{/block}

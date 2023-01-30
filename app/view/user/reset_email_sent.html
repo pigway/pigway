@@ -1,0 +1,27 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.verify.result}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$Think.lang.user.password.reset.apply.success}</div>
+        <div class="card-body">
+            <h5 class="card-title">{$Think.lang.user.password.reset.email.sent}</h5>
+            <p class="card-text">{$Think.lang.user.password.reset.email.sent.help}</p>
+            <hr class="my-1"/>
+            <small class="text-silence">{$Think.lang.user.password.reset.to.sign.in.click.help}<a href="/User/signIn">{$Think.lang.user.sign.in}</a></small>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        Cookies.remove('urlPrev');
+        Cookies.remove('urlNow');
+    });
+</script>
+{/block}

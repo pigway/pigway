@@ -1,0 +1,157 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$article['A_Title']}{/block}
+{block name="head-extra"}
+<link rel="stylesheet" href="__ED__/css/editormd.preview.min.css"/>
+<style type="text/css">
+    .editormd-html-preview {
+        padding: 0;
+    }
+
+    .content {
+        background-color: #fff;
+    }
+
+    /*用于修复畅言移动设备用户中心覆盖与框架冲突问题*/
+    #SOHUCS #SOHU_MAIN .module-mobile-user-center {
+        padding-top: 56px;
+        padding-bottom: 37px;
+    }
+
+    /*用于修复畅言移动设备用户登出覆盖与框架冲突问题*/
+    #SOHUCS #SOHU_MAIN .user-center-log-out-center {
+        bottom: 37px !important;
+    }
+
+    /*用于修复畅言移动设备给评论盖章与框架冲突问题*/
+    #SOHUCS .dialog-docker-p8 {
+        margin-bottom: 37px !important;
+    }
+
+    /*用于修复畅言移动设备底部固定快捷评论与框架冲突问题*/
+    #SOHUCS #SOHU_MAIN .module-mobile-cmt-float-bar {
+        bottom: 37px !important;
+    }
+
+    /*用于修复畅言移动设备发表评论与框架冲突问题*/
+    #SOHUCS #SOHU_MAIN .module-mobile-cmt-box .mobile-cmt-box {
+        padding-top: 56px;
+    }
+</style>
+{/block}
+{block name="main-content"}
+<div class="container-lg">
+    <div class="p-3 my-3 content shadow">
+        <h1 class="text-center display-6 my-0">{$article['A_Title']}</h1>
+        {notempty name="$article['A_Subtitle']"}
+        <figcaption class="blockquote-footer text-center fs-5 fw-light my-0">
+            {$article['A_Subtitle']}
+        </figcaption>
+        {/notempty}
+        <div id="div-content" class="mt-3">
+            {if $article['A_ContentFormat'] === 1}
+            <textarea class="d-none">{$article['A_ContentMarkdown']|raw}</textarea>
+            {else /}
+            {$article['A_Content']|raw}
+            {/if}
+        </div>
+        <hr class="text-muted my-2"/>
+        <div class="d-flex">
+            <small id="small-articleInfo" class="text-silence">{$Think.lang.data.update.last}<span
+                    class="text-decoration-underline" data-bs-toggle="tooltip"
+                    title="{$article.LastUpdateTime}">{$article.LastUpdateTime|timeAgo}</span>{$Think.lang.punc.comma}{:lang('article.create.by',['author'=>'<a
+                    href="/Article/Author?auid='.$article.ArticleAuthorR[0]->Author->AU_Id.'" class="text-silence">'.$article.ArticleAuthorR[0]->Author->AU_Nickname.'</a>'])}{if
+                (count($article.ArticleCategoryR) >
+                0)}{$Think.lang.punc.comma}{$Think.lang.article.file.in}{$Think.lang.punc.colon}{foreach
+                $article.ArticleCategoryR as $key => $category}{if ($key > 0)}{$Think.lang.punc.caesura}{/if}<a
+                        href="/Index/index?ca={$category.Category.C_Alias}" class="text-silence">{$category.Category.C_Name}</a>{/foreach}{/if}
+            </small>
+            {if $article.ArticleAuthorR[0]->Author->U_Id === $Request.session.uid}
+            <small class="ms-auto text-nowrap"><a
+                    href="/Article/{if ($article.A_Type === 0 && $article.A_ContentFormat === 1)}editMarkdown{/if}?aid={$article.A_Id}">{$Think.lang.article.edit}</a></small>
+            {/if}
+        </div>
+    </div>
+    <div id="SOHUCS" sid="{$article.A_Id}"></div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script src="__ED__/lib/marked.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/prettify.min.js" charset="UTF-8"></script>
+<!-- Cause bug with bootstrap.js, replace with eve.js & new raphael.js -->
+<!-- <script src="__ED__/lib/raphael_old.min.js" charset="UTF-8"></script> -->
+<script src="__JS__/eve.js" charset="UTF-8"></script>
+<script src="__ED__/lib/raphael.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/underscore.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/sequence-diagram.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/flowchart.min.js" charset="UTF-8"></script>
+<script src="__ED__/lib/jquery.flowchart.min.js" charset="UTF-8"></script>
+<script src="__ED__/editormd.min.js" charset="UTF-8"></script>
+<script type="text/javascript">
+    $(function () {
+        editormd.emoji.path = 'http://www.webpagefx.com/tools/emoji-cheat-sheet/graphics/emojis/';
+        editormd.katexURL = {
+            css: "__KATEX__/katex.min",
+            js: "__KATEX__/katex.min"
+        };
+
+        $('textarea').each(function () {
+            editormd.markdownToHTML($(this).parent().attr('id'), {
+                //htmlDecode: true,       // 开启 HTML 标签解析，为了安全性，默认不开启
+                htmlDecode: 'style,script,iframe',  // you can filter tags decode
+                //toc: false,
+                tocm: true,    // Using [TOCM]
+                //tocContainer: '#custom-toc-container', // 自定义 ToC 容器层
+                //gfm: false,
+                //tocDropdown: true,
+                //markdownSourceCode: true, // 是否保留 Markdown 源码，即是否删除保存源码的 Textarea 标签
+                emoji: true,
+                taskList: true,
+                tex: true,  // 默认不解析
+                flowChart: true,  // 默认不解析
+                sequenceDiagram: true,  // 默认不解析
+            });
+        });
+
+        // 畅言 SOHUCS
+        var appid = 'cyusNsXxx';
+        var conf = 'prod_30e409c181032dfd4c944bfd95e1a3c3';
+        var width = window.innerWidth || document.documentElement.clientWidth;
+        if (width < 1000) {
+            var head = document.getElementsByTagName('head')[0] || document.head || document.documentElement;
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.charset = 'utf-8';
+            script.id = 'changyan_mobile_js';
+            script.src = 'https://cy-cdn.kuaizhan.com/upload/mobile/wap-js/changyan_mobile.js?client_id=' + appid + '&conf=' + conf;
+            head.appendChild(script);
+        } else {
+            var loadJs = function (d, a) {
+                var c = document.getElementsByTagName("head")[0] || document.head || document.documentElement;
+                var b = document.createElement("script");
+                b.setAttribute("type", "text/javascript");
+                b.setAttribute("charset", "UTF-8");
+                b.setAttribute("src", d);
+                if (typeof a === "function") {
+                    if (window.attachEvent) {
+                        b.onreadystatechange = function () {
+                            var e = b.readyState;
+                            if (e === "loaded" || e === "complete") {
+                                b.onreadystatechange = null;
+                                a()
+                            }
+                        }
+                    } else {
+                        b.onload = a
+                    }
+                }
+                c.appendChild(b)
+            };
+            loadJs("https://cy-cdn.kuaizhan.com/upload/changyan.js", function () {
+                window.changyan.api.config({appid: appid, conf: conf})
+            });
+        }
+    });
+</script>
+{/block}

@@ -1,0 +1,256 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.verify}{/block}
+{block name="head-extra"}
+<style type="text/css">
+</style>
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$Think.lang.user.verify.method.select.help}</div>
+        <div class="card-body">
+            <div class="row">
+                <label class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.verify.method}</label>
+                <div class="col-sm-9">
+                    <ul class="list-group">
+                        {foreach $verifyMethod as $key=>$method}
+                        {eq name='method.available' value='1'}
+                        <button type="button" class="list-group-item list-group-item-action" data-role="method"
+                                value="{$method.code}">{$method.hidden}
+                        </button>
+                        {else/}
+                        <button type="button" class="list-group-item list-group-item-action" data-role="method"
+                                value="{$method.code}" disabled>{$method.hidden}
+                        </button>
+                        {/eq}
+                        {/foreach}
+                    </ul>
+                    <div id="div-verifyMethodInvalidFeedback" class="invalid-feedback"></div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <label for="txt-verifyInfo"
+                       class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.verify.method.info.full}</label>
+                <div class="col-sm-9">
+                    <input id="txt-verifyInfo" type="text" class="form-control" disabled>
+                    <div id="div-verifyInfoInvalidFeedback" class="invalid-feedback"></div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <label for="txt-captcha"
+                       class="col-sm-3 col-form-label text-sm-end">{$Think.lang.captcha.__self}</label>
+                <div class="col-sm-9">
+                    <div class="input-group has-validation">
+                        <input id="txt-captcha" type="text" class="form-control">
+                        <span class="input-group-text rounded-end p-0">
+                            <img id="img-captcha" role="button" src="/User/captcha" class="rounded-end img-fluid"
+                                 style="height: 36px; min-width: 167px"/>
+                        </span>
+                        <div id="div-captchaInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-sm-2 offset-sm-3">
+                    <button id="btn-verify" class="btn btn-secondary text-nowrap"><span
+                            class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                            aria-hidden="true"></span>{$Think.lang.sys.verify}
+                    </button>
+                </div>
+            </div>
+            {:token_meta()}
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        $('#img-captcha').click(function () {
+            $(this).prop('src', '/User/captcha?' + new Date().getTime());
+        });
+
+        function checkVerifyMethod() {
+            let verifyMethod = $('button[data-role="method"].active').val();
+            if (verifyMethod !== undefined) {
+                $('.list-group').removeClass('border border-danger');
+                $('#div-verifyMethodInvalidFeedback').empty().hide();
+                return true;
+            } else {
+                $('.list-group').addClass('border border-danger');
+                $('#div-verifyMethodInvalidFeedback').text('{$Think.lang.user.verify.method.required}').show();
+                return false;
+            }
+        }
+
+        $('button[data-role="method"]').click(function () {
+            $('button[data-role="method"]').removeClass('active');
+            $(this).addClass('active');
+            let method = $(this).val();
+            if (method == METHOD_EMAIL) { // method[string]使用==自动转型[int]
+                $('#txt-verifyInfo').attr('placeholder', '{$Think.lang.user.verify.email.address.full}').removeAttr('disabled').focus();
+            } else if (method == METHOD_MOBILE_PHONE) {
+                $('#txt-verifyInfo').attr('placeholder', '{$Think.lang.user.verify.mobile.phone.number.full}').removeAttr('disabled').focus();
+            } else {
+                $('#txt-verifyInfo').removeAttr('placeholder').attr('disabled', true);
+            }
+            checkVerifyMethod();
+        });
+
+        function checkVerifyInfo() {
+            if (checkVerifyMethod()) {
+                let verifyMethod = parseInt($('button[data-role="method"].active').val());
+                let verifyInfo = $('#txt-verifyInfo').val();
+
+                if (verifyInfo.length > 0) {
+                    switch (verifyMethod) {
+                        case METHOD_EMAIL:
+                            if ($.testEmailAddress(verifyInfo)) {
+                                $('#div-verifyInfoInvalidFeedback').empty();
+                                $('#txt-verifyInfo').removeClass('is-invalid').addClass('is-valid');
+                                return true;
+                            } else {
+                                $('#div-verifyInfoInvalidFeedback').text('{$Think.lang.user.email.address.format.error}');
+                                $('#txt-verifyInfo').removeClass('is-valid').addClass('is-invalid');
+                                return false;
+                            }
+                        case METHOD_MOBILE_PHONE:
+                            if ($.testMobilePhoneNumber(verifyInfo)) {
+                                $('#div-verifyInfoInvalidFeedback').empty();
+                                $('#txt-verifyInfo').removeClass('is-invalid').addClass('is-valid');
+                                return true;
+                            } else {
+                                $('#div-verifyInfoInvalidFeedback').text('{$Think.lang.user.mobile.phone.number.format.error}');
+                                $('#txt-verifyInfo').removeClass('is-valid').addClass('is-invalid');
+                                return false;
+                            }
+                    }
+                } else {
+                    $('#div-verifyInfoInvalidFeedback').text('{$Think.lang.user.verify.method.info.full.required}');
+                    $('#txt-verifyInfo').removeClass('is-valid').addClass('is-invalid');
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        $('#txt-verifyInfo').bind('input propertychange', function () {
+            checkVerifyInfo();
+        });
+
+        function checkCaptcha() {
+            let captcha = $('#txt-captcha').val();
+            if (captcha.length == '{$Think.config.captcha.user.length}') {
+                $('#div-captchaInvalidFeedback').empty();
+                $('#txt-captcha').removeClass('is-invalid').addClass('is-valid');
+                return true;
+            } else {
+                $('#div-captchaInvalidFeedback').text('{:lang("captcha.length.error",["length"=>$Think.config.captcha.user.length])}');
+                $('#txt-captcha').removeClass('is-valid').addClass('is-invalid');
+                return false;
+            }
+        }
+
+        $('#txt-captcha').bind('input propertychange', function () {
+            checkCaptcha();
+        });
+
+        $('#txt-verifyInfo').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-verify').click();
+            }
+        });
+
+        $('#txt-captcha').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-verify').click();
+            }
+        });
+
+        $('#btn-verify').click(function () {
+            if (checkVerifyInfo() && checkCaptcha()) {
+                $.ajax({
+                    type: 'post',
+                    url: '/User/verifyResetMethod',
+                    timeout: AJAX_TIME_OUT,
+                    async: true,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        method: $('button[data-role="method"].active').val(),
+                        info: $('#txt-verifyInfo').val(),
+                        captcha: $('#txt-captcha').val()
+                    },
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('#btn-verify').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                    },
+                    success: function (jsonData) {
+                        if (jsonData === undefined) {
+                            return toastAjaxResult();
+                        }
+                        if (jsonData.__token__ !== null) {
+                            $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                        }
+
+                        let result = jsonData.result;
+                        if (result === DONE) { // 验证通过
+                            switch (jsonData.method) {
+                                case METHOD_EMAIL:
+                                    return location.href = '/User/resetEmailSent';
+                                case METHOD_MOBILE_PHONE:
+                                    return location.href = '/User/resetMobilePhoneVerify?u=' + jsonData.user + '&sc=' + jsonData.scene + '&i=' + jsonData.idCode;
+                            }
+                        } else if (result === FAILED) { // 验证未通过
+                            switch (jsonData.err.code) {
+                                case EMAIL_ADDRESS_MISMATCH:
+                                case MOBILE_PHONE_NUMBER_MISMATCH:
+                                    $('#img-captcha').attr('src', '/User/captcha');
+                                    $('#div-verifyInfoInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-verifyInfo').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                                case CAPTCHA_MISMATCH:
+                                    $('#div-captchaInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-captcha').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else if (result === INPUT_ERROR) { // 输入错误
+                            switch (jsonData.err.code) {
+                                case METHOD_REQUIRE:
+                                    $('.list-group').addClass('border border-danger');
+                                    $('#div-verifyMethodInvalidFeedback').text(jsonData.err.msg).show();
+                                    break;
+                                case CAPTCHA_REQUIRE:
+                                case CAPTCHA_LENGTH:
+                                case CAPTCHA_FORMAT:
+                                    $('#div-captchaInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-captcha').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                                case EMAIL_ADDRESS_REQUIRE:
+                                case EMAIL_ADDRESS_FORMAT:
+                                case MOBILE_PHONE_NUMBER_REQUIRE:
+                                case MOBILE_PHONE_NUMBER_FORMAT:
+                                    $('#div-verifyInfoInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-verifyInfo').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else {
+                            toastAjaxResult(result, getErrorMessage(jsonData));
+                        }
+                    },
+                    error: function () {
+                        toastAjaxResult();
+                    },
+                    complete: function () {
+                        $('#btn-verify').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{/block}

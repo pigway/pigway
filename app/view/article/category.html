@@ -1,0 +1,194 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.nav.category.management}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div class="container-lg card shadow-sm my-3">
+    <div class="table-responsive">
+        <table class="table table-hover text-center">
+            <thead>
+            <tr>
+                <th scope="col" class="text-start">{$Think.lang.article.category.name}</th>
+                <th scope="col">{$Think.lang.article.category.alias}</th>
+                <th scope="col">{$Think.lang.article.category.taxis}</th>
+                <th scope="col">{$Think.lang.article.category.total}</th>
+                <th scope="col">{$Think.lang.article.category.remark}</th>
+                <th scope="col">{$Think.lang.sys.operate}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {$categoryCheckboxTableHTML|raw}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-end mb-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-category">
+            {$Think.lang.sys.create}
+        </button>
+    </div>
+    {:token_meta()}
+</div>
+{/block}
+{block name="modal"}
+<div class="modal fade" id="modal-category" tabindex="-1" aria-labelledby="lbl-create" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lbl-create">{$Think.lang.sys.create}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <label class="col-sm-3 col-form-label text-sm-end">{$Think.lang.article.category.parent}</label>
+                    <div class="col-sm-9">
+                        <ul class="list-group">
+                            {$categoryListGroupHTML|raw}
+                        </ul>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-name"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.article.category.name}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-name" type="text" class="form-control">
+                        <div id="div-nameInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-alias"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.article.category.alias}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-alias" type="text" class="form-control">
+                        <div id="div-aliasInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-taxis"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.article.category.taxis}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-taxis" type="number" min="0" step="1" class="form-control">
+                        <div id="div-taxisInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-remark"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.article.category.remark}</label>
+                    <div class="col-sm-9">
+                        <textarea id="txt-remark" class="form-control"></textarea>
+                        <div id="div-remarkInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-clear" type="button" class="btn btn-outline-warning me-auto">{$Think.lang.sys.clear}
+                </button>
+                <button id="btn-save" type="button" class="btn btn-primary text-nowrap"><span
+                        class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                        aria-hidden="true"></span><span id="span-save"></span></button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {$Think.lang.sys.close}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script type="text/javascript">
+    $(function () {
+        $('#lnk-category').addClass('active');
+
+        $('#modal-category ul').find('button').click(function () {
+            if ($(this).hasClass('active')) {
+                $(this).removeClass('active');
+            } else {
+                $('#modal-category ul').find('button.active').removeClass('active');
+                $(this).addClass('active');
+            }
+        });
+
+        let CATEGORY_ID;
+
+        $('#modal-category').on('show.bs.modal', function () {
+            if (CATEGORY_ID === undefined) {
+                $('#span-save').text('{$Think.lang.sys.create}');
+            }
+        }).on('hidden.bs.modal', function () {
+            CATEGORY_ID = undefined;
+            $('#btn-create').addClass('d-none');
+            $('#btn-edit').addClass('d-none');
+        });
+
+        $('tbody').find('a[c-operation="edit"]').click(function () {
+            CATEGORY_ID = $(this).attr('id').split('lnk-edit_')[1];
+            $('#modal-category ul').find('button.active').removeClass('active');
+            $('#btn-category_' + $(this).attr('c-parent')).addClass('active');
+            $('#txt-name').val($(this).attr('c-name'));
+            $('#txt-alias').val($(this).attr('c-alias'));
+            $('#txt-taxis').val($(this).attr('c-taxis'));
+            $('#txt-remark').val($(this).attr('c-remark'));
+            $('#span-save').text('{$Think.lang.sys.edit}');
+            $('#modal-category').modal('show');
+        });
+
+        $('#btn-clear').click(function () {
+            $('#modal-category ul').find('button.active').removeClass('active');
+            $('#txt-name').val(null);
+            $('#txt-alias').val(null);
+            $('#txt-taxis').val(null);
+            $('#txt-remark').val(null);
+        });
+
+        $('#btn-save').click(function () {
+            let parent = $('#modal-category ul').find('button.active');
+            let parentId;
+            if (parent.length === 1) {
+                parentId = parent.attr('id').split('btn-category_')[1];
+            }
+
+            $.ajax({
+                type: 'post',
+                url: CATEGORY_ID === undefined ? '/Article/createCategory' : '/Article/updateCategory',
+                timeout: AJAX_TIME_OUT,
+                async: true,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                data: {
+                    cid: CATEGORY_ID,
+                    parentId: parentId,
+                    name: $('#txt-name').val(),
+                    alias: $('#txt-alias').val(),
+                    taxis: $('#txt-taxis').val(),
+                    remark: $('#txt-remark').val(),
+                },
+                dataType: 'json',
+                beforeSend: function () {
+                    $('#btn-save').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                },
+                success: function (jsonData) {
+                    if (jsonData === undefined) {
+                        return toastAjaxResult();
+                    }
+                    if (jsonData.__token__ !== undefined) {
+                        $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                    }
+
+                    let result = jsonData.result;
+                    if (result === DONE) {
+                        location.href = '/Article/category';
+                    } else {
+                        toastAjaxResult(result, getErrorMessage(jsonData));
+                    }
+                },
+                error: function () {
+                    toastAjaxResult();
+                },
+                complete: function () {
+                    $('#btn-save').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                }
+            });
+        });
+    });
+</script>
+{/block}

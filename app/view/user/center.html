@@ -1,0 +1,350 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.user.center}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div id="center" class="accordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="pnl-displayName">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#div-displayName"
+                    aria-expanded="true" aria-controls="div-displayName">
+                {$Think.lang.user.display.name}
+            </button>
+        </h2>
+        <div id="div-displayName" class="accordion-collapse collapse show" aria-labelledby="pnl-displayName"
+             data-bs-parent="#center">
+            <div class="accordion-body container-fixed-sm mx-auto">
+                <div class="input-group">
+                    <input id="txt-displayName" type="text" class="form-control"
+                           aria-label="{$Think.lang.user.display.name}" aria-describedby="btn-setDisplayName"
+                           value="{$displayName}">
+                    <button id="btn-setDisplayName" class="btn btn-secondary text-nowrap" type="button"><span
+                            class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                            aria-hidden="true"></span>{$Think.lang.sys.set}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--<div id="div-displayName" class="accordion-collapse collapse show" aria-labelledby="pnl-displayName"
+             data-bs-parent="#center">
+            <div class="accordion-body container-fixed-sm mx-auto">
+                <div class="row">
+                    <label for="txt-displayName" class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.display.name}</label>
+                    <div class="col-sm-9">
+                        <div class="input-group">
+                            <input id="txt-displayName" type="text" class="form-control"
+                                   placeholder="{$Think.lang.user.display.name}"
+                                   aria-label="{$Think.lang.user.display.name}" aria-describedby="btn-setDisplayName"
+                                   value="{$Request.session.display_name}">
+                            <button id="btn-setDisplayName" class="btn btn-secondary" type="button">
+                                {$Think.lang.sys.set}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>-->
+    </div>
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="pnl-password">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#div-password" aria-expanded="false"
+                    aria-controls="div-password">
+                {$Think.lang.user.password}
+            </button>
+        </h2>
+        <div id="div-password" class="accordion-collapse collapse" aria-labelledby="pnl-password"
+             data-bs-parent="#center">
+            <div class="accordion-body container-fixed-sm mx-auto">
+                <div class="row">
+                    <label for="txt-oldPassword"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.password.old}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-oldPassword" type="password" class="form-control">
+                        <div id="div-oldPasswordInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-password"
+                           class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.password}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-password" type="password" class="form-control">
+                        <div id="div-passwordInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <label for="txt-passwordConfirm" class="col-sm-3 col-form-label text-sm-end">{$Think.lang.user.password.confirm}</label>
+                    <div class="col-sm-9">
+                        <input id="txt-passwordConfirm" type="password" class="form-control">
+                        <div id="div-passwordConfirmInvalidFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-sm-2 offset-sm-3">
+                        <button id="btn-setPassword" class="btn btn-secondary text-nowrap"><span
+                                class="spinner-border spinner-border-sm me-2 d-none" role="status"
+                                aria-hidden="true"></span>{$Think.lang.sys.set}
+                        </button>
+                    </div>
+                </div>
+                {:token_meta()}
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid text-center pt-5 pb-2">
+    <a href="/User/logout" class="btn btn-secondary">{$Think.lang.user.logout}</a>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script src="__JS__/jsencrypt.min.js" charset="UTF-8"></script>
+<script type="text/javascript">
+    $(function () {
+        // Display name
+        $('#txt-displayName').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-setDisplayName').click();
+            }
+        });
+
+        $('#btn-setDisplayName').click(function () {
+            if ($('#txt-displayName').val().length > 0) {
+                $.ajax({
+                    type: 'post',
+                    url: '/User/setDisplayName',
+                    timeout: AJAX_TIME_OUT,
+                    async: true,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        displayName: $('#txt-displayName').val()
+                    },
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('#btn-setDisplayName').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                    },
+                    success: function (jsonData) {
+                        if (jsonData === undefined) {
+                            return toastAjaxResult();
+                        }
+                        if (jsonData.__token__ !== undefined) {
+                            $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                        }
+
+                        let result = jsonData.result;
+                        if (result === DONE) {
+                            easyToast(TOAST_SUCCESS, '{$Think.lang.success.set}');
+                        } else {
+                            toastAjaxResult(result, getErrorMessage(jsonData));
+                        }
+                    },
+                    error: function () {
+                        toastAjaxResult();
+                    },
+                    complete: function () {
+                        $('#btn-setDisplayName').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                    }
+                });
+            }
+        });
+
+        // Password
+        let encrypt = new JSEncrypt();
+
+        $.ajax({
+            type: 'get',
+            url: '/static/rsa_1024_pub.pem',
+            async: false,
+            success: function (data) {
+                if (typeof data === 'string' && data.length === 272) {
+                    encrypt.setPublicKey(data);
+                } else {
+                    easyToast(TOAST_ERROR, '{$Think.lang.error.system}');
+                }
+            },
+            error: function () {
+                easyToast(TOAST_ERROR, '{$Think.lang.error.system}');
+            }
+        });
+
+        function checkOldPassword() {
+            let oldPassword = $('#txt-oldPassword').val();
+
+            if (oldPassword.length > 0) {
+                if (oldPassword.length >= '{$Think.config.app.password_min_length}' && oldPassword.length <= '{$Think.config.app.password_max_length}') {
+                    $('#div-oldPasswordInvalidFeedback').empty();
+                    $('#txt-oldPassword').removeClass('is-invalid').addClass('is-valid');
+
+                    return true;
+                } else {
+                    $('#div-oldPasswordInvalidFeedback').text('{$Think.lang.user.password.length.error}');
+                    $('#txt-oldPassword').removeClass('is-valid').addClass('is-invalid');
+                }
+            } else {
+                $('#div-oldPasswordInvalidFeedback').text('{$Think.lang.user.password.required}');
+                $('#txt-oldPassword').removeClass('is-valid').addClass('is-invalid');
+            }
+
+            return false;
+        }
+
+        function checkPassword() {
+            let password = $('#txt-password').val();
+
+            if (password.length > 0) {
+                if (password.length >= '{$Think.config.app.password_min_length}' && password.length <= '{$Think.config.app.password_max_length}') {
+                    $('#div-passwordInvalidFeedback').empty();
+                    $('#txt-password').removeClass('is-invalid').addClass('is-valid');
+
+                    return true;
+                } else {
+                    $('#div-passwordInvalidFeedback').text('{$Think.lang.user.password.length.error}');
+                    $('#txt-password').removeClass('is-valid').addClass('is-invalid');
+                }
+            } else {
+                $('#div-passwordInvalidFeedback').text('{$Think.lang.user.password.required}');
+                $('#txt-password').removeClass('is-valid').addClass('is-invalid');
+            }
+
+            return false;
+        }
+
+        function checkPasswordConfirm() {
+            let passwordConfirm = $('#txt-passwordConfirm').val();
+
+            if (passwordConfirm.length > 0) {
+                if (passwordConfirm.length >= '{$Think.config.app.password_min_length}' && passwordConfirm.length <= '{$Think.config.app.password_max_length}') {
+                    $('#div-passwordConfirmInvalidFeedback').empty();
+                    $('#txt-passwordConfirm').removeClass('is-invalid').addClass('is-valid');
+                    let password = $('#txt-password').val();
+                    if (passwordConfirm === password) {
+                        return true;
+                    } else {
+                        $('#div-passwordConfirmInvalidFeedback').text('{$Think.lang.user.password.confirm.mismatch}');
+                        $('#txt-passwordConfirm').removeClass('is-valid').addClass('is-invalid');
+                    }
+                } else {
+                    $('#div-passwordConfirmInvalidFeedback').text('{$Think.lang.user.password.length.error}');
+                    $('#txt-passwordConfirm').removeClass('is-valid').addClass('is-invalid');
+                }
+            } else {
+                $('#div-passwordConfirmInvalidFeedback').text('{$Think.lang.user.password.required}');
+                $('#txt-passwordConfirm').removeClass('is-valid').addClass('is-invalid');
+            }
+
+            return false;
+        }
+
+        function checkInput() {
+            if (checkOldPassword() && checkPassword() && checkPasswordConfirm()) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        $('#txt-oldPassword').bind('input propertychange', function () {
+            checkInput();
+        });
+
+        $('#txt-password').bind('input propertychange', function () {
+            checkInput();
+        });
+
+        $('#txt-passwordConfirm').bind('input propertychange', function () {
+            checkInput();
+        });
+
+        $('#txt-oldPassword').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-setPassword').click();
+            }
+        });
+
+        $('#txt-password').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-setPassword').click();
+            }
+        });
+
+        $('#txt-passwordConfirm').keydown(function (e) {
+            if (e.keyCode == 13) {
+                $('#btn-setPassword').click();
+            }
+        });
+
+        $('#btn-setPassword').click(function () {
+            if (checkInput()) {
+                $.ajax({
+                    type: 'post',
+                    url: '/User/setPassword',
+                    timeout: AJAX_TIME_OUT,
+                    async: true,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        oldPassword: encrypt.encrypt($('#txt-oldPassword').val()),
+                        password: encrypt.encrypt($('#txt-password').val())
+                    },
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $('#btn-reset').attr('disabled', true).find('[role="status"]').removeClass('d-none');
+                    },
+                    success: function (jsonData) {
+                        if (jsonData === undefined) {
+                            return toastAjaxResult();
+                        }
+                        if (jsonData.__token__ !== undefined) {
+                            $('meta[name="csrf-token"]').attr('content', jsonData.__token__);
+                        }
+
+                        let result = jsonData.result;
+                        if (result === DONE) {
+                            return location.href = '/User/forceSignIn';
+                        } else if (result === FAILED) {
+                            switch (jsonData.err.code) {
+                                case PASSWORD_MISMATCH:
+                                    $('#div-oldPasswordInvalidFeedback').text(jsonData.err.msg);
+                                    $('#txt-oldPassword').removeClass('is-valid').addClass('is-invalid');
+                                    break;
+                            }
+                        } else if (result === INPUT_ERROR) {
+                            if (jsonData.isOld) {
+                                switch (jsonData.err.code) {
+                                    case PASSWORD_REQUIRE:
+                                    case PASSWORD_LENGTH:
+                                    case PASSWORD_FORMAT:
+                                        $('#div-oldPasswordInvalidFeedback').text(jsonData.err.msg);
+                                        $('#txt-oldPassword').removeClass('is-valid').addClass('is-invalid');
+                                        break;
+                                }
+                            } else {
+                                switch (jsonData.err.code) {
+                                    case PASSWORD_REQUIRE:
+                                    case PASSWORD_LENGTH:
+                                    case PASSWORD_FORMAT:
+                                        $('#div-passwordInvalidFeedback').text(jsonData.err.msg);
+                                        $('#txt-password').removeClass('is-valid').addClass('is-invalid');
+                                        break;
+                                }
+                            }
+                        } else {
+                            toastAjaxResult(result, getErrorMessage(jsonData));
+                        }
+                    },
+                    error: function () {
+                        toastAjaxResult();
+                    },
+                    complete: function () {
+                        $('#btn-reset').removeAttr('disabled').find('[role="status"]').addClass('d-none');
+                    }
+                });
+            }
+        });
+    });
+</script>
+{/block}

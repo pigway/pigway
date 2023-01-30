@@ -1,0 +1,32 @@
+{extend name="public:frame"/}
+{block name="subtitle"}{$Think.lang.nav.about}{/block}
+{block name="head-extra"}
+{/block}
+{block name="main-content"}
+<div class="container-fixed-sm position-absolute top-50 start-50 translate-middle px-3">
+    <div class="card shadow">
+        <div class="card-header text-silence">{$Think.lang.nav.about}</div>
+        <div class="card-body">
+            <p class="card-text">
+                {$Think.lang.app.about|raw}
+            </p>
+            <p class="card-text text-silence">
+                {$Think.lang.app.thank|raw}
+            </p>
+            <hr class="my-1"/>
+            <a href="https://github.com/pigway/pigway" class="text-silence text-decoration-none text-nowrap me-3"><i class="fa-brands fa-github me-1"></i>PIG Way</a>
+            <a href="#div-weixinMPQRCode" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="div-weixinMPQRCode" class="text-silence text-decoration-none text-nowrap me-3"><i class="fa-brands fa-weixin me-1"></i>pigwaycom</a>
+            <a href="mailto:{$Think.lang.app.author.email}" class="text-silence text-decoration-none text-nowrap"><i class="fa-solid fa-envelope me-1"></i>pigway@qq.com</a>
+            <div id="div-weixinMPQRCode" class="collapse">
+                <img src="/static/img/weixinMPQRCode.png" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="modal"}
+{/block}
+{block name="js"}
+<script type="text/javascript">
+</script>
+{/block}
