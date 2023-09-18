@@ -75,5 +75,8 @@ return [
     'aliyun_send_sms_count_down' => 120,
     'aliyun_sms_reset_password_template_id' => 'SMS_237217309',
     'aliyun_sms_reset_password_code_length' => 6,
-    'aliyun_sms_reset_password_code_type' => 1
+    'aliyun_sms_reset_password_code_type' => 1,
+
+    'donate_alipay_image_route' => '/static/img/alipay_donate.jpg',
+    'donate_wechat_image_route' => '/static/img/wechat_donate.jpg',
 ];
