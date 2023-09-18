@@ -366,7 +366,7 @@ function timeAgo($date, $nowDate = null)
 
     $diff = abs($diff);
 
-    for ($i = 0; $diff >= $secArray[$i] && $i < count($secArray); $i++) {
+    for ($i = 0; $i < count($secArray) && $diff >= $secArray[$i]; $i++) {
         $diff /= $secArray[$i];
     }
     $diff = intval($diff);

@@ -13,7 +13,7 @@ return array(
         'keywords' => '渡口浪人,PigWay,个人信息分类方法,personal information group way',
         'description' => '个人信息分类方法,Personal Information Group Way',
         'welcome' => '欢迎回来！',
-        'about' => '<blockquote class="blockquote">PIG Way</blockquote><figcaption class="blockquote-footer">Personal Information Group Way</figcaption>即个人信息分类方法。开发本平台的初衷是为凌乱、冗余的个人信息建立一种有效的管理方法，也提醒自己不要像猪那样好吃懒做，应勤而好学、不断提升并保持良好的心境。',
+        'about' => '<blockquote class="blockquote">PIG Way</blockquote><figcaption class="blockquote-footer">Personal Information Group Way</figcaption>即个人信息分类方法。本平台为渡口浪人独立开发，初衷是为凌乱、冗余的个人信息建立一种有效的管理方法，也提醒自己不要像猪那样好吃懒做，应勤而好学、不断提升并保持良好的心境。',
         'thank' => '<small>感谢：<a href="https://www.thinkphp.cn" class="text-silence" target="_blank">ThinkPHP</a>、<a href="https://pandao.github.io/editor.md" class="text-silence" target="_blank">Editor.md</a>、<a href="https://github.com/hustcc/timeago.js" class="text-silence" target="_blank">timeago.js</a> 等无私奉献的组织、个人等。</small>'
     ),
     'sys' => array( // 系统级操作
@@ -45,7 +45,8 @@ return array(
         'just.now' => '刚刚',
         'right.now' => '片刻后',
         'time.ago' => '{:time}前', // '{:time} ago'
-        'time.in' => '{:time}后' // 'in {:time}'
+        'time.in' => '{:time}后', // 'in {:time}'
+        'donate' => '捐赠'
     ),
     'punc' => array( // Punctuation
         'colon' => '：',
@@ -135,6 +136,9 @@ return array(
         'image.mime.type.limited.help' => '上传图片MIME类型仅限：' . vImage::FILE_MIME . '！',
         'image.wait.help' => '请等待图片上传！'
 
+    ),
+    'download' => array(
+        'qrcode' => '下载二维码'
     ),
     'page' => array( // 页面控制相关
         'number' => '页码',
@@ -270,5 +274,11 @@ return array(
         'right.error.help' => '您没有该文章操作权限！',
         'edit' => '编辑',
         'none' => '没有文章'
+    ),
+    'alipay' => array(
+        '_self' => '支付宝'
+    ),
+    'wechat' => array(
+        '_self' => '微信'
     )
 );

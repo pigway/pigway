@@ -52,6 +52,9 @@
                     <a id="lnk-index" class="nav-link" aria-current="page" href="/">{$Think.lang.nav.index}</a>
                 </li>
                 {:extraMenu()}
+                <li class="nav-item">
+                    <a id="lnk-about" class="nav-link" aria-current="page" href="/Index/about">{$Think.lang.nav.about}</a>
+                </li>
             </ul>
             <div class="d-flex">
                 <!--<div class="input-group">
@@ -91,6 +94,34 @@
 </nav>
 <div id="div-toastContainer" class="position-fixed bottom-0 end-0 p-1 toast-container"
      style="margin-bottom: 37px; z-index: 11"></div>
+<div id="modal-donate" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{$Think.lang.sys.donate}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="img-donate" src="{$Think.config.app.donate_alipay_image_route}" class="img-thumbnail text-center" alt="{$Think.lang.sys.donate}">
+                <div class="mt-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="donate" id="chk-donateAlipay" value="0" checked>
+                        <label class="form-check-label" for="chk-donateAlipay">{$Think.lang.alipay._self}</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="donate" id="chk-donateWechat" value="1">
+                        <label class="form-check-label" for="chk-donateWechat">{$Think.lang.wechat._self}</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="lnk-donateQRCode" href="{$Think.config.app.donate_alipay_image_route}" download="{$Think.lang.app.brand}_{$Think.lang.sys.donate}{$Think.lang.punc.bracket.left}{$Think.lang.alipay._self}{$Think.lang.punc.bracket.right}"
+                   class="btn btn-primary">{$Think.lang.download.qrcode}</a>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{$Think.lang.sys.close}</button>
+            </div>
+        </div>
+    </div>
+</div>
 {block name="modal"}{/block}
 <script src="__JS__/jquery-3.6.0.min.js" charset="UTF-8"></script>
 <script src="__BS__/bootstrap.bundle.min.js" charset="UTF-8"></script>
@@ -344,6 +375,19 @@
 
         return pretty;
     }
+
+    $('input[type="radio"][name="donate"]').click(function () {
+        switch (parseInt($(this).val())) {
+            case 0:
+                $('#img-donate').attr('src', '{$Think.config.app.donate_alipay_image_route}');
+                $('#lnk-donateQRCode').attr('href', '{$Think.config.app.donate_alipay_image_route}').attr('download', '{$Think.lang.app.brand}_{$Think.lang.sys.donate}{$Think.lang.punc.bracket.left}{$Think.lang.alipay._self}{$Think.lang.punc.bracket.right}');
+                break;
+            case 1:
+                $('#img-donate').attr('src', '{$Think.config.app.donate_wechat_image_route}');
+                $('#lnk-donateQRCode').attr('href', '{$Think.config.app.donate_wechat_image_route}').attr('download', '{$Think.lang.app.brand}_{$Think.lang.sys.donate}{$Think.lang.punc.bracket.left}{$Think.lang.wechat._self}{$Think.lang.punc.bracket.right}');
+                break;
+        }
+    });
 </script>
 {block name="js"}{/block}
 </body>
